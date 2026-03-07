@@ -1,0 +1,23 @@
+{
+  "skill_name": "code-quality-analyzer",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "Can you review my Flask login route for quality issues? Here's the code:\n\n```python\nimport sqlite3\nfrom flask import Flask, request, session, redirect\n\napp = Flask(__name__)\napp.secret_key = 'supersecret123'\n\n@app.route('/login', methods=['POST'])\ndef login():\n    u = request.form['username']\n    p = request.form['password']\n    db = sqlite3.connect('users.db')\n    c = db.cursor()\n    q = \"SELECT * FROM users WHERE username='\" + u + \"' AND password='\" + p + \"'\"\n    c.execute(q)\n    r = c.fetchone()\n    if r:\n        session['uid'] = r[0]\n        return redirect('/dashboard')\n    return 'bad login', 401\n```",
+      "expected_output": "A scored report with: Security score of 1-3/10 (SQL injection, hardcoded secret key, plaintext password comparison), Efficiency noting DB connection not closed and no indexing, Readability noting cryptic variable names (u, p, c, q, r). Report should follow the structured template with all three sections and top recommendations.",
+      "files": []
+    },
+    {
+      "id": 1,
+      "prompt": "audit this data processing script and tell me how good it is:\n\n```python\ndef find_duplicates(records):\n    duplicates = []\n    for i in range(len(records)):\n        for j in range(len(records)):\n            if i != j:\n                if records[i]['email'] == records[j]['email']:\n                    if records[i] not in duplicates:\n                        duplicates.append(records[i])\n    return duplicates\n\ndef generate_report(records):\n    # get duplicates\n    dupes = find_duplicates(records)\n    report = \"\"\n    for d in dupes:\n        report = report + \"DUPLICATE: \" + str(d) + \"\\n\"\n    return report\n\ndef send_report(report):\n    import smtplib\n    server = smtplib.SMTP('smtp.company.com', 587)\n    server.login('reports@company.com', 'P@ssw0rd!')\n    server.sendmail('reports@company.com', 'admin@company.com', report)\n```",
+      "expected_output": "A scored report with: Security score of 2-4/10 (hardcoded SMTP credentials), Efficiency score of 1-3/10 (O(n^2) duplicate detection with nested loops, string concatenation in loop instead of join), Readability noting the import inside function, magic values. Structured template with specific line-level findings.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "is this node.js API handler production ready? give me a quality assessment\n\n```javascript\nconst express = require('express');\nconst { Pool } = require('pg');\nconst pool = new Pool({ connectionString: process.env.DATABASE_URL });\n\napp.get('/api/users/:id', async (req, res) => {\n  try {\n    const result = await pool.query(\n      'SELECT * FROM users WHERE id = $1',\n      [req.params.id]\n    );\n    if (result.rows.length === 0) {\n      return res.status(404).json({ error: 'User not found' });\n    }\n    res.json(result.rows[0]);\n  } catch (err) {\n    console.error(err);\n    res.status(500).json({ error: err.message });\n  }\n});\n```",
+      "expected_output": "A scored report where Security is moderate (7-8/10 - parameterized query is correct, but leaking err.message to client exposes internals), Efficiency is good (7-9/10 - connection pool is good, but SELECT * fetches unneeded columns), Readability is solid (7-8/10). The report should acknowledge what's done WELL (parameterized queries, connection pooling, async/await, error handling structure) while noting the specific issues.",
+      "files": []
+    }
+  ]
+}
