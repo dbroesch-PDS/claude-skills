@@ -234,7 +234,10 @@ fig.update_layout(
     plot_bgcolor=PANEL_BG,
     font=dict(color=TEXT_CLR, size=12),
     legend=dict(bgcolor='rgba(0,0,0,0)', font=dict(color=TEXT_CLR)),
-    xaxis=dict(gridcolor=GRID_CLR, showline=False, tickfont=dict(color=MUTED_CLR)),
+    # For daily time-series: tickmode="linear" + dtick="D1" ensures exactly one tick per day.
+    # Without this, Plotly interpolates sub-day gradations when data is sparse.
+    xaxis=dict(gridcolor=GRID_CLR, showline=False, tickfont=dict(color=MUTED_CLR),
+               tickmode="linear", dtick="D1", tickformat="%b %d, %Y"),
     yaxis=dict(gridcolor=GRID_CLR, showline=False, tickfont=dict(color=MUTED_CLR),
                tickprefix='$', tickformat=',.0f'),
     margin=dict(l=50, r=20, t=30, b=40),
@@ -373,3 +376,4 @@ Before declaring the work done, verify every item:
 7. Figure saved at ≥150 DPI with `bbox_inches='tight'` (Python)
 8. Canvas has a descriptive `aria-label`; `<img>` tags have descriptive `alt` text
 9. No hardcoded `width`/`height` on canvas elements or `figsize` that ignores the data density
+10. **Daily time-series axes:** always set `tickmode="linear"` and `dtick="D1"` (Plotly) or `unit: 'day'` + `stepSize: 1` (Chart.js) so each calendar day gets exactly one tick — never multiple sub-day gradations
