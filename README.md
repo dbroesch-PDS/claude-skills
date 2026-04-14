@@ -6,14 +6,16 @@ A collection of custom Claude Code skills for data science, engineering, and pro
 
 ### `linear-pm`
 
-Full Linear project management via the Linear MCP — create and update issues, manage projects and cycles, plan sprints, triage backlogs, check team workload, and build single-file HTML sprint dashboards for any Linear team or org.
+Full Linear project management via `sq agent-tools linear` — create and update issues, manage projects and cycles, plan sprints, triage backlogs, check team workload, and build single-file HTML sprint dashboards for any Linear team or org.
+
+**Requires:** the `linear` skill (`sq agent-tools linear` extension, connected at `go/agent-tools`).
 
 **Covers:**
-- Full Linear CRUD: issues, projects, cycles, comments, milestones, status updates
+- Full Linear CRUD via GraphQL: issues, projects, cycles, comments, milestones, status updates
 - Sprint dashboard generation and maintenance (Tab 1: Projects, Tab 2: Team & Sprint, Tab 3: Work Distribution)
 - Sprint member card audits with a full checklist (cycle UUID lookup, archived issue handling, status verification, pts recompute, all-members table sync)
 - Onboarding new teams to the dashboard pattern (discover initiative → projects → teams → cycles → labels → save config)
-- Hardened MCP quirks: cycle UUID vs number, assignee+cycle empty results, archived issues in results, status update UUID requirement
+- Hardened data quirks: cycle UUID vs number, assignee+cycle empty results, archived issues in results, status update UUID requirement
 
 Triggers on: "update Linear", "what's in my sprint", "build a dashboard", "audit member cards", "triage my backlog", "create an issue", "what's the status of X project", etc.
 
