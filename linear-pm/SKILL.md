@@ -1,12 +1,20 @@
 ---
 name: linear-pm
 description: >
-  Full Linear project management via the Linear MCP. Use this skill whenever the user wants to do ANYTHING in Linear: create or update issues, manage projects or cycles, plan sprints, triage a backlog, check team workload, update statuses, set priorities, add labels, search issues, manage roadmaps, or track progress. Also trigger when the user mentions tickets, work items, engineering planning, or anything that sounds like it belongs in a project tracker. This skill also covers building and maintaining single-file HTML sprint dashboards for any Linear team or org. If in doubt, trigger.
+  Full Linear project management. Use this skill whenever the user wants to do ANYTHING in Linear: create or update issues, manage projects or cycles, plan sprints, triage a backlog, check team workload, update statuses, set priorities, add labels, search issues, manage roadmaps, or track progress. Also trigger when the user mentions tickets, work items, engineering planning, or anything that sounds like it belongs in a project tracker. This skill also covers building and maintaining single-file HTML sprint dashboards for any Linear team or org. If in doubt, trigger.
 ---
 
 # Linear Project Management
 
-You have access to Linear via the Linear MCP tools. Use them to do real work — don't just describe what the user could do.
+Use the `linear` skill (`sq agent-tools linear`) for all Linear operations. Do real work — don't just describe what the user could do.
+
+**Before issuing any Linear commands**, verify the extension is available:
+
+```bash
+sq agent-tools linear --help
+```
+
+If it fails, follow the `linear` skill's auth instructions (connect at `go/agent-tools`).
 
 ## Core Principles
 
@@ -36,56 +44,38 @@ You have access to Linear via the Linear MCP tools. Use them to do real work —
 
 ---
 
-## Known MCP Tool Quirks
+## Known Linear Data Quirks
 
 ### Always Use Cycle UUID, Never Cycle Number
-**Never pass a cycle number like `"1"` to `cycle` filters.** Cycle numbers are team-local and not globally unique — `cycle: "1"` can match the wrong cycle or return empty results on teams where cycle numbering differs.
+**Never filter by cycle number like `number: 1`.** Cycle numbers are team-local and not globally unique.
 
-**Always use the UUID.** Get it first with:
+**Always use the UUID.** Get it first with a readonly query:
+```bash
+sq agent-tools linear execute-readonly-query \
+  --query 'query($teamId: String!) { team(id: $teamId) { cycles(filter: { isActive: { eq: true } }) { nodes { id number name startsAt endsAt } } } }' \
+  --variables '{"teamId":"<team-uuid>"}'
 ```
-list_cycles(teamId="<team_uuid>", type="current")  → returns id, title, startsAt, endsAt
-```
-Then use that UUID in all subsequent `list_issues` calls.
+Then use the `id` field in all subsequent issue queries.
 
 ### Assignee + Cycle Filter May Return Empty
-The `assignee` + `cycle` combination sometimes returns zero results even when issues exist. If this happens, drop the `assignee` filter, fetch all cycle issues, then filter by assignee in Python:
+The GraphQL `assignee` + `cycle` combination can return zero results even when issues exist. If this happens, fetch all cycle issues without the assignee filter, then post-filter by assignee name in the results.
 
-```python
-import json
-issues = json.loads(open('result.txt').read())
-if isinstance(issues, dict): issues = issues.get('issues', [])
-mine = [i for i in issues if 'NameToMatch' in str(i.get('assignee', ''))]
-```
-
-### Estimate Field is a Dict
-`estimate` is `{"value": 2, "name": "2 Points"}`, not an int:
-```python
-est = issue.get('estimate')
-pts = est.get('value', 0) if isinstance(est, dict) else (est or 0)
-```
+### Estimate Field Shape
+In GraphQL results `estimate` is an object: `{ value: 2, name: "2 Points" }`. Use `.value` for point counts, not the top-level field.
 
 ### Archived Issues Come Back in Results
-`list_issues` returns archived issues by default (they retain their `cycleId`). Always check `archivedAt` — if set, **exclude the issue entirely** from dashboards and counts.
+Issues with `archivedAt` set retain their `cycleId`. Always include `archivedAt` in your selection set and exclude any issue where `archivedAt` is non-null from dashboards and counts.
 
-### Status Updates Require UUID, Not Slug
-`get_status_updates` does not accept project slugs. Workflow:
-1. `get_project(query="project name")` → get the UUID `id` field
-2. `get_status_updates(type="project", project="<uuid>", limit=1)`
+### Status Updates Require Project UUID
+Query by UUID, not slug:
+1. `execute-readonly-query` → `project(id: "<uuid>")` or search projects to get the UUID
+2. Then fetch `projectUpdates(filter: { project: { id: { eq: "<uuid>" } } })`
 
 ### Finding Team IDs
-`list_teams` with a name query can time out. Use `list_projects` (filtered by initiative or team) which returns `teamId` in the response. Or call `list_cycles(teamId=...)` once you have a known ID.
+Fetching all teams can be slow. Prefer extracting `team { id key }` from project or issue results when you already have a project in scope. Or use the Saved Team Configurations section below.
 
-### Large Results (>50KB)
-Results are saved to file automatically. Parse with:
-```bash
-cat /path/to/result.txt | python3 -c "
-import json, sys
-data = json.loads(sys.stdin.read())
-issues = json.loads(data[0]['text'])
-if isinstance(issues, dict): issues = issues.get('issues', [])
-print(len(issues), 'issues')
-"
-```
+### Large Result Sets
+Use narrow GraphQL selection sets (`first: 50`, `after` cursor for pagination) rather than fetching everything at once. Request only the fields you need.
 
 ---
 
@@ -108,20 +98,20 @@ Example: `rads-q2-2026-status.html`
 When the user asks to build a dashboard for a team or org not already configured:
 
 1. **Discover the org structure:**
-   - `list_initiatives` → find the relevant initiative and ID
-   - `list_projects(initiative="<id>")` → get project IDs and team IDs
-   - `list_teams` (paginated) or extract from project results → map team names to IDs
+   - `execute-readonly-query` → `initiatives(first: 20)` → find the relevant initiative and ID
+   - `execute-readonly-query` → `projects(filter: { initiatives: { id: { eq: "<id>" } } })` → get project IDs and team IDs
+   - Extract `team { id key name }` from project results → map team names to IDs
 
 2. **Discover the people:**
-   - `list_users` → get workspace members; filter to the relevant team(s)
+   - `execute-readonly-query` → `team(id: "<id>") { members { nodes { id displayName email } } }` per team
    - Note cross-team contributors (people who appear in multiple teams' cycle issues)
 
 3. **Discover active cycles:**
-   - For each team: `list_cycles(teamId="<id>", type="current")` → get the UUID
-   - Note cycle name, start, end dates
+   - For each team: `execute-readonly-query` → `team(id: "<id>") { cycles(filter: { isActive: { eq: true } }) { nodes { id number name startsAt endsAt } } }`
+   - Note cycle UUID, name, start, end dates
 
 4. **Discover labels:**
-   - `list_issue_labels(teamId="<id>")` → get all labels for the team
+   - `execute-readonly-query` → `team(id: "<id>") { labels { nodes { id name } } }`
    - Ask the user which labels to feature in the Work Distribution tab (Tab 3)
 
 5. **Save the config** to the Saved Team Configurations section at the bottom of this file, then build the dashboard using the standard HTML template.
@@ -184,15 +174,21 @@ The bottom of Tab 2 has a summary table with one row per person. **Every time yo
 
 Run this process for each member when auditing or refreshing the dashboard:
 
-1. **Identify the correct cycle UUID** for the member's team (see Saved Configs below, or `list_cycles(teamId, type="current")`).
-2. Call `list_issues(assignee="<name>", cycle="<uuid>", team="<team_id>", includeArchived=true, limit=50)`.
-3. **Drop archived issues** — filter out any where `archivedAt` is set.
-4. **Separate Canceled issues** — keep in the table, exclude from counts.
-5. **Verify every status** against the HTML — statuses change frequently and are almost always stale.
-6. **Count delta** between Linear and the HTML badge. Find missing issues before making any edits.
-7. **Recompute pts** — done pts and total pts from the filtered live issue list.
-8. **Update the member card** — badge, all rows.
-9. **Update the all-members table row** to match the new badge exactly.
+1. **Identify the correct cycle UUID** for the member's team (see Saved Configs below, or query `team(id: "<id>") { cycles(filter: { isActive: { eq: true } }) { nodes { id } } }`).
+2. Query all cycle issues for the team:
+   ```bash
+   sq agent-tools linear execute-readonly-query \
+     --query 'query($cycleId: String!) { cycle(id: $cycleId) { issues { nodes { id identifier title archivedAt state { name type } assignee { displayName } estimate { value } } } } }' \
+     --variables '{"cycleId":"<cycle-uuid>"}'
+   ```
+3. **Drop archived issues** — filter out any where `archivedAt` is non-null.
+4. **Filter to the member** by `assignee.displayName`.
+5. **Separate Canceled issues** — keep in the table, exclude from counts.
+6. **Verify every status** against the HTML — statuses change frequently and are almost always stale.
+7. **Count delta** between Linear and the HTML badge. Find missing issues before making any edits.
+8. **Recompute pts** — done pts and total pts from the filtered live issue list.
+9. **Update the member card** — badge, all rows.
+10. **Update the all-members table row** to match the new badge exactly.
 
 ---
 
@@ -200,32 +196,33 @@ Run this process for each member when auditing or refreshing the dashboard:
 
 ### Creating an issue
 1. Confirm: team, title, optional (description, priority, assignee, labels, cycle, project)
-2. Call `save_issue`
-3. Return the issue URL/ID
+2. Resolve any needed IDs (team, state, assignee, cycle) with readonly queries first
+3. Call `batch-create-or-update-issues` with `operation: "create"`
+4. Return the issue URL/ID from the result
 
 ### Sprint / Cycle planning
-1. `list_cycles(teamId, type="current")` → get active cycle
-2. List unscoped backlog issues (no cycle filter, status = Todo)
+1. Query `team(id: "<id>") { cycles(filter: { isActive: { eq: true } }) { nodes { id name } } }` → get active cycle UUID
+2. Query backlog: `issues(filter: { team: { id: { eq: "<id>" } }, state: { type: { eq: "unstarted" } }, cycle: { null: true } })`
 3. Help scope issues in — confirm before bulk operations
 4. Summarize scope: count, total pts
 
 ### Backlog grooming
-1. Fetch backlog (no cycle, status = Todo)
+1. Fetch backlog: `issues(filter: { team: ..., state: { type: { in: ["unstarted"] } }, cycle: { null: true } }, first: 50)`
 2. Group by priority; flag: no priority, no estimate, stale (>30 days no update)
-3. Triage: update priority, estimate, assignee, or close
+3. Triage: `batch-create-or-update-issues` to update priority, estimate, assignee, or state
 
 ### Standup / status view for a person
-1. `list_issues(assignee="<name>", cycle="<uuid>")` for active cycle
-2. Group by status: Done (today/this week), In Progress, Blocked, Todo
+1. Query cycle issues: `cycle(id: "<uuid>") { issues { nodes { identifier title state { name type } assignee { displayName } } } }`
+2. Filter to the person, group by status: Done (today/this week), In Progress, Blocked, Todo
 3. Surface blockers first
 
 ### Searching issues
-- Use keyword, label, priority, assignee, team, project, status filters
-- Paginate if many results; summarize patterns before listing all
+- Use GraphQL `issues(filter: { ... })` with keyword, label, priority, assignee, team, project, state filters
+- Paginate with `first` / `after`; summarize patterns before listing all
 
 ### Gathering project status updates
-1. `get_project(query="<name>")` → get UUID
-2. `get_status_updates(type="project", project="<uuid>", limit=1)`
+1. `execute-readonly-query` → `projects(filter: { name: { containsIgnoreCase: "<name>" } }) { nodes { id name } }` → get UUID
+2. `execute-readonly-query` → `projectUpdates(filter: { project: { id: { eq: "<uuid>" } } }, orderBy: createdAt, first: 1) { nodes { body health createdAt diffMarkdown } }`
 3. Post `body` verbatim; append `diffMarkdown` as progress note
 4. Flag late if posted after Thursday 5pm PT
 
@@ -243,30 +240,28 @@ Run this process for each member when auditing or refreshing the dashboard:
 
 ---
 
-## MCP Tool Reference
+## sq agent-tools Linear Command Reference
 
-```
-mcp__claude_ai_Linear__list_issues         — list issues with filters
-mcp__claude_ai_Linear__get_issue           — fetch a single issue by ID or URL
-mcp__claude_ai_Linear__save_issue          — create or update an issue
-mcp__claude_ai_Linear__list_projects       — list projects (filter by initiative, team, member)
-mcp__claude_ai_Linear__get_project         — fetch a project by name/ID/slug
-mcp__claude_ai_Linear__save_project        — create or update a project
-mcp__claude_ai_Linear__get_status_updates  — fetch project/initiative status updates (UUID required)
-mcp__claude_ai_Linear__save_status_update  — post a status update
-mcp__claude_ai_Linear__list_cycles         — list cycles for a team
-mcp__claude_ai_Linear__list_teams          — list workspace teams
-mcp__claude_ai_Linear__list_users          — list workspace members
-mcp__claude_ai_Linear__get_initiative      — fetch initiative details
-mcp__claude_ai_Linear__list_initiatives    — list initiatives
-mcp__claude_ai_Linear__save_comment        — add a comment to an issue
-mcp__claude_ai_Linear__list_comments       — list comments on an issue
-mcp__claude_ai_Linear__list_milestones     — list milestones for a project
-mcp__claude_ai_Linear__list_issue_labels   — list labels for a team
-mcp__claude_ai_Linear__list_issue_statuses — list workflow states for a team
-```
+| Task | Command | Notes |
+|------|---------|-------|
+| List/search issues | `execute-readonly-query` with `issues(filter: {...})` | Use `cycle`, `assignee`, `state`, `team` filters |
+| Fetch one issue | `execute-readonly-query` with `issue(id: "ENG-123")` | Use identifier or UUID |
+| Create/update issues | `batch-create-or-update-issues` | Preferred for all issue writes |
+| Add comment | `execute-mutation-query` with `commentCreate` | Pass body via `--variables` |
+| List projects | `execute-readonly-query` with `projects(filter: {...})` | Filter by initiative, team, name |
+| Fetch project | `execute-readonly-query` with `project(id: "<uuid>")` | |
+| Update project | `execute-mutation-query` with `projectUpdate` | |
+| Project status updates | `execute-readonly-query` with `projectUpdates(filter: {...})` | UUID required, not slug |
+| Post status update | `execute-mutation-query` with `projectUpdateCreate` | |
+| Cycles for a team | `execute-readonly-query` with `team(id) { cycles(...) }` | Use `isActive: { eq: true }` filter |
+| Teams | `execute-readonly-query` with `teams { nodes { id key name } }` | |
+| Users | `execute-readonly-query` with `users` or `team(id) { members }` | |
+| Initiatives | `execute-readonly-query` with `initiatives` | |
+| Labels for a team | `execute-readonly-query` with `team(id) { labels { nodes { id name } } }` | |
+| Workflow states | `execute-readonly-query` with `team(id) { states { nodes { id name type } } }` | |
+| Milestones | `execute-readonly-query` with `project(id) { milestones { nodes { id name } } }` | |
 
-Check actual available tools at runtime — names may vary slightly. Use `ToolSearch` to fetch a schema when unsure of arguments.
+Run `sq agent-tools linear describe` to see sample query shapes from the extension. Refer to Linear's GraphQL docs for exact schema/mutation names.
 
 ---
 
@@ -285,7 +280,7 @@ Check actual available tools at runtime — names may vary slightly. Use `ToolSe
 - **Employer:** Block / Cash App — Risk Foundation / Support Product Science
 - **Role:** Data Scientist
 - Linear tracks data science work, analysis tasks, and cross-functional initiatives
-- Re-auth Linear MCP if needed via `/mcp` in Claude Code
+- Re-auth `sq agent-tools linear` if needed: connect at `go/agent-tools` in the G2 Connections page
 
 ---
 
