@@ -393,6 +393,10 @@ Finds open sprint issues with no point estimate assigned.
 
 **Filter:** drop archived, Canceled, "Below the Line", Done issues. Unpointed = `estimate` is null or 0. Whitelist only.
 
+**Parent issue exemption:** if an issue has no estimate but has child issues, fetch its children and sum their estimates. If the children have a total estimate > 0, the parent is **not** flagged — points on children satisfy the requirement. Only flag the parent if both the parent and all its children have no points.
+
+To fetch children, include `children { nodes { id estimate } }` in the issue query. If the Linear API returns children inline, use them directly. If not, query `issue(id: "<id>") { children { nodes { id estimate } } }` for each unpointed issue individually (batch these in parallel to avoid slow sequential lookups).
+
 **Step 3 — Show full drafts. Wait for explicit approval.**
 
 **Step 6 — Report back:** total issues, people messaged, failures.
