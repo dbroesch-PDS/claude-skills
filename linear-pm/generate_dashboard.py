@@ -47,11 +47,12 @@ TEAMS = {
 
 PDT = timezone(timedelta(hours=-7))  # Pacific Daylight Time (Apr–Oct)
 
-def _load_members_from_config() -> list:
-    """Load MEMBERS from team-config.json next to this script, if present."""
+def _load_members_from_config() -> tuple:
+    """Load MEMBERS and MANAGER from team-config.json next to this script, if present.
+    Returns (members_list, manager_name_or_None)."""
     config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "team-config.json")
     if not os.path.exists(config_path):
-        return None
+        return None, None
     with open(config_path) as f:
         config = json.load(f)
     result = []
@@ -67,9 +68,11 @@ def _load_members_from_config() -> list:
             "team_label": m.get("team_label") or " + ".join(teams),
             "cycle_keys": teams,
         })
-    return result
+    manager_name = (config.get("manager") or {}).get("name")
+    return result, manager_name
 
-MEMBERS = _load_members_from_config() or [
+_members_from_config, MANAGER_NAME = _load_members_from_config()
+MEMBERS = _members_from_config or [
     {"id": "victor",    "name_match": "Victor Garcia",     "display": "Victor Garcia",          "email": "victorg@squareup.com",    "team_label": "RADS-DS + RISKDS",        "cycle_keys": ["RADS-DS", "RISKDS"]},
     {"id": "nan",       "name_match": "Nan Gao",            "display": "Nan Gao",                "email": None,                       "team_label": "RADS-DS + RISKDS",        "cycle_keys": ["RADS-DS", "RISKDS"]},
     {"id": "jasmine",   "name_match": "Jasmine Dangjaros",  "display": "Jasmine Dangjaros [TL]", "email": "jdangjaros@squareup.com", "team_label": "RISKDS",                  "cycle_keys": ["RISKDS"]},
@@ -84,6 +87,8 @@ MEMBERS = _load_members_from_config() or [
     {"id": "kara",      "name_match": "Kara Downey",        "display": "Kara Downey",            "email": "kdowney@squareup.com",    "team_label": "SPDS",                    "cycle_keys": ["SPDS"]},
     {"id": "mariana",   "name_match": "Mariana Echeverria", "display": "Mariana Echeverria",     "email": "mecheverria@squareup.com","team_label": "SPDS",                    "cycle_keys": ["SPDS"]},
 ]
+
+MANAGER_NAME = MANAGER_NAME or "David Broesch"  # fallback if no config file
 
 LABEL_CATEGORIES = ["Analysis", "Automation", "Infrastructure", "KTLO"]
 LABEL_COLORS = {
@@ -308,7 +313,12 @@ def get_pts(issue: dict) -> int:
 
 def is_canceled(issue: dict) -> bool:
     return (issue.get("canceledAt") is not None or
-            (issue.get("state") or {}).get("type") == "cancelled")
+            (issue.get("state") or {}).get("type") in ("canceled", "cancelled"))
+
+def is_excluded_from_pts(issue: dict) -> bool:
+    """Excluded from points (numerator and denominator): cancelled issues plus
+    'Below the Line' — a RADS-specific de-prioritized state with type 'unstarted'."""
+    return is_canceled(issue) or (issue.get("state") or {}).get("name") == "Below the Line"
 
 def state_type(issue: dict) -> str:
     return (issue.get("state") or {}).get("type", "unstarted")
@@ -365,12 +375,13 @@ def classify_labels(issue: dict) -> list[str]:
     return [l for l in labels if l in LABEL_CATEGORIES]
 
 def member_stats(issues: list) -> dict:
-    active = [i for i in issues if not is_canceled(i)]
-    done    = [i for i in active if state_type(i) == "completed"]
-    in_prog = [i for i in active if state_type(i) == "started"]
-    todo    = [i for i in active if state_type(i) in ("unstarted", "backlog", "triage")]
-    total_pts = sum(get_pts(i) for i in active if get_pts(i))
-    done_pts  = sum(get_pts(i) for i in done if get_pts(i))
+    active    = [i for i in issues if not is_canceled(i)]
+    done      = [i for i in active if state_type(i) == "completed"]
+    in_prog   = [i for i in active if state_type(i) == "started"]
+    todo      = [i for i in active if state_type(i) in ("unstarted", "backlog", "triage")]
+    pts_scope = [i for i in active if not is_excluded_from_pts(i)]
+    total_pts = sum(get_pts(i) for i in pts_scope if get_pts(i))
+    done_pts  = sum(get_pts(i) for i in done if not is_excluded_from_pts(i) and get_pts(i))
     return {
         "total": len(active), "done": len(done),
         "in_progress": len(in_prog), "todo": len(todo),
@@ -674,7 +685,7 @@ def render_project_card(project: dict, update: dict | None) -> str:
         body_html = f"""<div class="section-label">Latest Weekly Update</div>
         <div class="update-box">
           <div class="update-header">
-            <span class="update-by">Posted by {author}</span>
+            <span class="update-by">Posted by {author} &nbsp;&middot;&nbsp; <a href="{url}" target="_blank" class="issue-link">View in Linear</a></span>
             <span class="update-date{date_flagged}">{'⚠ ' if date_flagged else ''}{_html.escape(date_display)}{_html.escape(late_note)}</span>
           </div>
           <div class="update-text">
@@ -686,19 +697,41 @@ def render_project_card(project: dict, update: dict | None) -> str:
     return f"""
     <div class="project-card {flag_class}">
       <div class="card-header">
-        <div>
-          <div class="card-title"><a href="{url}" target="_blank">{name}</a></div>
+        <div style="flex:1;min-width:0;">
+          <div class="card-title">{name}</div>
           <div class="card-meta">{"".join(tags)}</div>
         </div>
-        {badge}
+        <div style="display:flex;align-items:center;gap:0.6rem;flex-shrink:0;">
+          {badge}
+          <span class="chevron">▶</span>
+        </div>
       </div>
       <div class="card-body">{body_html}</div>
     </div>"""
 
+def _dri_team(lead_name: str) -> str:
+    """Return the child team key for a DRI by name.
+    Uses the last entry in cycle_keys so cross-team members (e.g. RADS-DS + RISKDS)
+    are grouped under their specific sub-team. Manager maps to RADS-DS."""
+    if not lead_name:
+        return "RADS-DS"
+    lower = lead_name.lower()
+    if lower == MANAGER_NAME.lower():
+        return "RADS-DS"
+    for m in MEMBERS:
+        if m["name_match"].lower() == lower:
+            keys = m.get("cycle_keys") or []
+            return keys[-1] if keys else "RADS-DS"
+    return "RADS-DS"
+
 def render_tab1(projects: list) -> str:
-    # Count flags for summary bar
+    # Filter to projects whose DRI is in the members list or is the manager
+    allowed_names = {m["name_match"].lower() for m in MEMBERS} | {MANAGER_NAME.lower()}
+    visible = [p for p in projects if (p.get("lead") or {}).get("name", "").lower() in allowed_names]
+
+    # Count flags for summary bar (from visible projects only)
     counts = {"ok": 0, "late": 0, "no_update": 0}
-    for p in projects:
+    for p in visible:
         u = p.get("_update")
         if not u or is_stale_update(u.get("createdAt",""), days=8):
             counts["no_update"] += 1
@@ -707,9 +740,51 @@ def render_tab1(projects: list) -> str:
         else:
             counts["ok"] += 1
 
-    cards = "\n".join(render_project_card(p, p.get("_update")) for p in projects)
+    team_order = list(TEAMS.keys())
+    grouped: dict = {t: [] for t in team_order}
+    for p in visible:
+        lead = (p.get("lead") or {}).get("name", "")
+        grouped[_dri_team(lead)].append(p)
+
+    # Render collapsible team sections
+    sections_html = ""
+    for team_key in team_order:
+        team_projects = grouped[team_key]
+        if not team_projects:
+            continue
+        # Per-team flag counts for the section header
+        t_ok = t_late = t_none = 0
+        for p in team_projects:
+            u = p.get("_update")
+            if not u or is_stale_update(u.get("createdAt",""), days=8):
+                t_none += 1
+            elif is_late_update(u.get("createdAt","")):
+                t_late += 1
+            else:
+                t_ok += 1
+        flag_parts = []
+        if t_ok:   flag_parts.append(f'<span style="color:var(--green)">{t_ok} on time</span>')
+        if t_late: flag_parts.append(f'<span style="color:var(--orange)">{t_late} late</span>')
+        if t_none: flag_parts.append(f'<span style="color:var(--red)">{t_none} no update</span>')
+        flag_summary = " &middot; ".join(flag_parts)
+
+        cards_html = "\n".join(render_project_card(p, p.get("_update")) for p in team_projects)
+        sections_html += f"""
+  <div class="team-group expanded">
+    <div class="team-group-header">
+      <div style="flex:1;min-width:0;">
+        <span class="team-group-name">{_html.escape(team_key)}</span>
+        <span class="team-group-meta">{len(team_projects)} project{"s" if len(team_projects) != 1 else ""} &nbsp;&middot;&nbsp; {flag_summary}</span>
+      </div>
+      <span class="chevron">▶</span>
+    </div>
+    <div class="team-group-body">
+      {cards_html}
+    </div>
+  </div>"""
+
     return f"""<div id="tab-projects" class="tab-pane active">
-  <div class="legend" style="max-width:1100px; margin: 0 auto 1rem;">
+  <div class="legend" style="margin-bottom: 1rem;">
     <div class="legend-item"><span class="dot on-track"></span> Update on time</div>
     <div class="legend-item"><span class="dot late"></span> Update posted late (after Thu 5pm PT)</div>
     <div class="legend-item"><span class="dot no-update"></span> No update / Stale (&gt;1 week)</div>
@@ -718,12 +793,12 @@ def render_tab1(projects: list) -> str:
     <div class="stat-card green"><div class="num">{counts['ok']}</div><div class="label">Updates On Time</div></div>
     <div class="stat-card orange"><div class="num">{counts['late']}</div><div class="label">Late Updates</div></div>
     <div class="stat-card red"><div class="num">{counts['no_update']}</div><div class="label">No / Stale Update</div></div>
-    <div class="stat-card blue"><div class="num">{len(projects)}</div><div class="label">Total Projects</div></div>
+    <div class="stat-card blue"><div class="num">{len(visible)}</div><div class="label">Total Projects</div></div>
   </div>
   <div class="flag-note">
     ⚠️ <strong>Flag rule:</strong> Updates posted after Thursday 5:00 PM PT for the relevant week are flagged as late. Dates shown in PT (PDT = UTC−7).
   </div>
-  <div class="projects">{cards}</div>
+  <div class="projects">{sections_html}</div>
 </div>"""
 
 # ─── TAB 2: TEAM & SPRINT ─────────────────────────────────────────────────────
@@ -869,8 +944,8 @@ def render_tab2(members_data: list[tuple], unassigned_issues: list) -> str:
     done_all   = [i for i in active_all if state_type(i) == "completed"]
     ip_all     = [i for i in active_all if state_type(i) == "started"]
     todo_all   = [i for i in active_all if state_type(i) in ("unstarted","backlog","triage")]
-    total_pts  = sum(get_pts(i) for i in active_all)
-    done_pts   = sum(get_pts(i) for i in done_all)
+    total_pts  = sum(get_pts(i) for i in active_all if not is_excluded_from_pts(i))
+    done_pts   = sum(get_pts(i) for i in done_all  if not is_excluded_from_pts(i))
 
     # Active contributors
     active_members = sum(1 for _, iss in members_data if any(not is_canceled(i) for i in iss))
@@ -1115,15 +1190,16 @@ CSS = """
     .stat-card .label { font-size: 0.78rem; color: var(--muted); margin-top: 0.3rem; }
     .stat-card.green .num { color: var(--green); } .stat-card.red .num { color: var(--red); }
     .stat-card.orange .num { color: var(--orange); } .stat-card.blue .num { color: var(--accent); } .stat-card.purple .num { color: var(--purple); }
-    .projects { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.2rem; }
+    .projects { display: flex; flex-direction: column; gap: 1.2rem; }
     .project-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
     .project-card.flag-late { border-left: 4px solid var(--orange); }
     .project-card.flag-no-update { border-left: 4px solid var(--red); }
     .project-card.flag-ok { border-left: 4px solid var(--green); }
-    .card-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 1.1rem 1.4rem 0.8rem; gap: 1rem; }
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 1.1rem 1.4rem 0.8rem; gap: 1rem; cursor: pointer; user-select: none; }
+    .card-header:hover { background: rgba(94,106,210,0.04); }
+    .card-header .chevron { font-size: 0.65rem; color: var(--muted); transition: transform 0.2s; flex-shrink: 0; }
+    .project-card.expanded .card-header .chevron { transform: rotate(90deg); }
     .card-title { font-size: 1rem; font-weight: 600; color: var(--text); }
-    .card-title a { color: var(--text); text-decoration: none; }
-    .card-title a:hover { color: var(--accent); }
     .card-meta { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem; align-items: center; }
     .tag { background: var(--tag-bg); color: var(--muted); font-size: 0.73rem; padding: 0.15rem 0.55rem; border-radius: 99px; border: 1px solid var(--border); white-space: nowrap; }
     .tag.status-develop { color: var(--accent); border-color: var(--accent); }
@@ -1133,7 +1209,8 @@ CSS = """
     .badge-flag.no-update { background: rgba(235,87,87,0.15); color: var(--red); border: 1px solid rgba(235,87,87,0.3); }
     .badge-flag.ok { background: rgba(38,185,109,0.1); color: var(--green); border: 1px solid rgba(38,185,109,0.25); }
     .badge-flag.stale { background: rgba(235,87,87,0.15); color: var(--red); border: 1px solid rgba(235,87,87,0.3); }
-    .card-body { padding: 0 1.4rem 1.2rem; }
+    .card-body { display: none; padding: 0 1.4rem 1.2rem; border-top: 1px solid var(--border); padding-top: 0.8rem; }
+    .project-card.expanded .card-body { display: block; }
     .update-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0.9rem 1rem; margin-top: 0.5rem; }
     .update-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; flex-wrap: wrap; gap: 0.4rem; }
     .update-by { font-size: 0.78rem; color: var(--muted); }
@@ -1152,6 +1229,16 @@ CSS = """
     .no-update-msg { font-size: 0.85rem; color: var(--muted); font-style: italic; margin-top: 0.5rem; }
     .section-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.3rem; }
     .flag-note { max-width: 1100px; margin: 0 auto 1.5rem; background: rgba(242,156,56,0.08); border: 1px solid rgba(242,156,56,0.25); border-radius: 8px; padding: 0.7rem 1rem; font-size: 0.82rem; color: var(--orange); }
+    .team-group { margin-bottom: 1.2rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .team-group-header { display: flex; align-items: center; gap: 1rem; padding: 0.85rem 1.2rem; cursor: pointer; user-select: none; }
+    .team-group-header:hover { background: rgba(94,106,210,0.04); }
+    .team-group-header .chevron { font-size: 0.65rem; color: var(--muted); transition: transform 0.2s; flex-shrink: 0; transform: rotate(90deg); }
+    .team-group:not(.expanded) .team-group-header .chevron { transform: rotate(0deg); }
+    .team-group-name { font-size: 0.95rem; font-weight: 700; color: var(--text); margin-right: 0.6rem; }
+    .team-group-meta { font-size: 0.78rem; color: var(--muted); }
+    .team-group-body { display: none; padding: 0 0.75rem 0.75rem; border-top: 1px solid var(--border); }
+    .team-group.expanded .team-group-body { display: block; }
+    .team-group-body .project-card { margin-top: 0.75rem; }
     .team-section { max-width: 1100px; margin: 0 auto 2rem; }
     .team-section h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
     .sprint-meta-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 2rem; }
@@ -1224,6 +1311,16 @@ JS = """
     header.appendChild(chevron);
     header.addEventListener('click', () => {
       header.closest('.member-card').classList.toggle('expanded');
+    });
+  });
+  document.querySelectorAll('.card-header').forEach(header => {
+    header.addEventListener('click', () => {
+      header.closest('.project-card').classList.toggle('expanded');
+    });
+  });
+  document.querySelectorAll('.team-group-header').forEach(header => {
+    header.addEventListener('click', () => {
+      header.closest('.team-group').classList.toggle('expanded');
     });
   });
 """
