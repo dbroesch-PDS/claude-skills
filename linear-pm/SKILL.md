@@ -114,7 +114,9 @@ When the user asks to build a dashboard for a team or org not already configured
    - `execute-readonly-query` → `team(id: "<id>") { labels { nodes { id name } } }`
    - Ask the user which labels to feature in the Work Distribution tab (Tab 3)
 
-5. **Save the config** to the Saved Team Configurations section at the bottom of this file, then build the dashboard using the standard HTML template.
+5. **Create a `team-config.json`** in the project directory (see Team Config File section under Audit Functions). This file drives both the dashboard (Tab 2 member whitelist) and all audit functions — no member data should be hardcoded anywhere else.
+
+6. **Save Linear IDs** (team IDs, cycle UUIDs, initiative ID) to the Saved Team Configurations section at the bottom of this file.
 
 ---
 
@@ -228,6 +230,235 @@ Run this process for each member when auditing or refreshing the dashboard:
 
 ---
 
+## Audit Functions
+
+These are reusable sprint hygiene workflows. Run them on demand or when the user asks to audit the team.
+
+---
+
+### ⚠️ APPROVAL GATE — MANDATORY FOR ALL AUDITS
+
+**NEVER send any Slack message without David explicitly saying "send it", "go ahead", or equivalent.**
+
+The full sequence is always:
+1. Fetch data from Linear
+2. Compute affected issues
+3. **Show complete draft messages** for every person
+4. **Stop and wait** — do not proceed
+5. Only send after David gives explicit approval
+
+This applies even if David has previously said "send" in the conversation, even if he just provided a missing email or Slack ID, and even if he seems to be in a hurry. **Providing missing info is not approval to send.** Always ask: *"Ready to send these?"*
+
+---
+
+### Team Config File
+
+All team member and manager data lives in a local `team-config.json` file — **never hardcode names, emails, or Slack IDs in audit code**. This makes the skill reusable for any team.
+
+**Config file location:** look for `team-config.json` in the project's working directory (e.g. `/Users/dbroesch/development/project management/team-config.json`). If not found, ask the user where it is.
+
+**Schema:**
+```json
+{
+  "manager": {
+    "name": "...",
+    "email": "...",
+    "slack_id": "..."
+  },
+  "members": [
+    {
+      "name": "Full Name",
+      "login": "linear_display_name",
+      "email": "work@company.com",
+      "slack_id": "UXXXXXXXX or null",
+      "slack_email": "slack_login@company.com",
+      "note": "optional — e.g. uses @block.xyz not @squareup.com",
+      "teams": ["TEAM-KEY"],
+      "role": "TL (optional)"
+    }
+  ]
+}
+```
+
+**How to use at runtime:**
+1. Load the config: `config = json.load(open("team-config.json"))`
+2. Build `LOGIN_MAP = {m["login"]: m["name"] for m in config["members"]}`
+3. Build `WHITELIST = {m["name"] for m in config["members"]}`
+4. For Slack: use `m["slack_id"]` if non-null; otherwise look up via `m["slack_email"]` using `users.lookupByEmail`
+5. Manager (Audit 4 report recipient): `config["manager"]["slack_id"]`
+
+**Setting up for a new team:** copy `team-config.json`, replace all fields, set `manager` to whoever should receive Audit 4 reports.
+
+---
+
+### Slack API
+
+The Slack MCP tools do not reliably load. Use the Slack REST API directly via Python:
+
+```python
+import urllib.request, json
+
+TOKEN = "<xoxp token from ~/.claude/settings.json mcpServers.slack.env.SLACK_MCP_XOXP_TOKEN>"
+
+def slack_api(endpoint, payload):
+    req = urllib.request.Request(
+        f"https://slack.com/api/{endpoint}",
+        data=json.dumps(payload).encode(),
+        headers={"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}
+    )
+    return json.loads(urllib.request.urlopen(req).read())
+
+def lookup_slack_id(email):
+    import urllib.parse
+    req = urllib.request.Request(
+        "https://slack.com/api/users.lookupByEmail?" + urllib.parse.urlencode({"email": email}),
+        headers={"Authorization": f"Bearer {TOKEN}"}
+    )
+    resp = json.loads(urllib.request.urlopen(req).read())
+    return resp["user"]["id"] if resp.get("ok") else None
+
+def send_dm(slack_id, text):
+    slack_api("chat.postMessage", {"channel": slack_id, "text": text})
+```
+
+---
+
+### Message formatting rules (all audits)
+
+- Use Slack's hyperlink format `<url|display text>` for every issue — **never put raw URLs in the message body**
+- Link format: `<url|[IDENTIFIER]> Issue title` — **only the identifier is hyperlinked**, the title follows as plain text
+- Bold with `*text*`, italic with `_text_`
+- Closing line is always: `Thanks! 🤖 _Sent on behalf of David via the RADS sprint dashboard_ 🤖`
+
+---
+
+### Running multiple audits at once
+
+When the user asks to run more than one audit (e.g. "run all audits"), **combine all findings into one message per person** — do not send separate messages per audit. Each person gets one DM with only the sections relevant to them.
+
+**Combined message template:**
+
+```
+Hey [First name]! 👋 Quick sprint hygiene check — you have a few issues that need some attention.
+
+🏷️ *Missing label* — add one of: Analysis · Automation · Infrastructure · KTLO
+• <url|[IDENTIFIER]> Issue title
+• <url|[IDENTIFIER]> Issue title
+_Done (historical):_
+• <url|[IDENTIFIER]> Issue title
+
+📊 *Missing point estimate* — suggested scale: 1 · 2 · 3 · 5 · 8
+• <url|[IDENTIFIER]> Issue title
+
+📅 *Missing due date*
+• <url|[IDENTIFIER]> Issue title
+
+Thanks! 🤖 _Sent on behalf of David via the RADS sprint dashboard_ 🤖
+```
+
+- Only include sections that apply to the person — omit any section with zero issues
+- Within the label section, split open vs done into subsections only if the person has both
+
+---
+
+### Audit 1 — Unlabeled sprint issues
+
+**Trigger phrases:** "audit unlabeled issues", "find tickets without labels", "notify owners of unlabeled tickets"
+
+Finds all sprint issues assigned to tracked members missing a work-type label. Tracked labels: **Analysis**, **Automation**, **Infrastructure**, **KTLO**.
+
+**Step 1 — Fetch** all active cycle issues for all 4 teams in parallel using saved cycle UUIDs.
+
+**Step 2 — Filter:**
+- Drop archived, Canceled, "Below the Line" issues
+- Unlabeled = no label in `{Analysis, Automation, Infrastructure, KTLO}`
+- Whitelist only — skip anyone not in the tracked member list
+- Group by assignee
+
+**Step 3 — Show full drafts. Wait for explicit approval.**
+
+**Step 4 — Look up Slack IDs** from the cached table above; fall back to email lookup for uncached members.
+
+**Step 5 — Send** after approval.
+
+**Step 6 — Report back:** total issues (open vs done), people messaged, failures, unassigned issues.
+
+---
+
+### Audit 2 — Unpointed sprint issues
+
+**Trigger phrases:** "audit unpointed issues", "find tickets without points", "notify owners of unpointed tickets"
+
+Finds open sprint issues with no point estimate assigned.
+
+**Filter:** drop archived, Canceled, "Below the Line", Done issues. Unpointed = `estimate` is null or 0. Whitelist only.
+
+**Step 3 — Show full drafts. Wait for explicit approval.**
+
+**Step 6 — Report back:** total issues, people messaged, failures.
+
+---
+
+### Audit 3 — Issues without a due date
+
+**Trigger phrases:** "audit issues without due dates", "find tickets with no due date", "notify owners of undated tickets"
+
+Finds open sprint issues with no `dueDate`. Done issues are excluded — due dates only matter for in-flight work.
+
+**Filter:** drop archived, Canceled, "Below the Line", Done issues. Undated = `dueDate` is null. Whitelist only.
+
+**Step 3 — Show full drafts. Wait for explicit approval.**
+
+**Step 6 — Report back:** total issues, people messaged, failures.
+
+---
+
+### Audit 4 — Points in sprint (per person)
+
+**Trigger phrases:** "audit sprint points", "check sprint load", "who is over/under-loaded"
+
+Checks each whitelisted member's total sprint point commitment. Flags anyone outside the healthy range.
+
+**Thresholds:** < 10 pts = under-loaded, > 20 pts = over-loaded. 10–20 pts = healthy (no flag).
+
+**Filter:** count points from non-archived, non-Canceled, non-"Below the Line" issues only. Use `estimate.value` (sum across all issues regardless of state — total committed points, not done points).
+
+**Step 1 — Fetch** all active cycle issues for all 4 teams using saved cycle UUIDs. Include `estimate { value }`, `assignee { displayName }`, `archivedAt`, `state { name type }`.
+
+**Step 2 — Compute per-person totals:**
+- Group by assignee, whitelist only
+- Sum `estimate.value` (treat null as 0)
+- Flag anyone where total < 10 or > 20
+
+**Step 3 — Send report to David (not to individuals).** Use David's Slack ID: `U01H5TZGHUJ` — or DM `dbroesch@squareup.com`.
+
+**Report format** (DM to David):
+
+```
+📊 *Sprint Points Audit* — RADS Q2 2026 Sprint 1
+
+🔴 *Over-loaded* (> 20 pts):
+• Victor Garcia — 24 pts
+• Cassandra Milan — 22 pts
+
+🟡 *Under-loaded* (< 10 pts):
+• Kara Downey — 6 pts
+• Lucas Brandl — 8 pts
+
+✅ *Healthy* (10–20 pts):
+• Name — N pts
+• Name — N pts
+
+_[N] members flagged out of [total] tracked._
+```
+
+- List flagged members with their point totals
+- Healthy members can be listed by first name only in a compact line
+- **This is a manager-level report — never send point data to the individuals**
+- No approval needed to send to David (it's his own DM), but still show the draft first
+
+---
+
 ## Interaction Patterns
 
 **When the user is vague:** Ask one focused clarifying question. Don't front-load multiple questions.
@@ -314,22 +545,10 @@ This section stores discovered team IDs, cycle IDs, and people for each org Davi
 | CUSTDS | `d2c218f5-dbf7-4300-9876-01ad32b80e8e` |
 | SPDS | `22b97d24-9249-4ebf-8895-1c5a67e5588a` |
 
-#### People (verified actual Linear team, not just org chart)
-| Person | Email | Actual Linear Team(s) |
-|---|---|---|
-| Victor Garcia | victorg@squareup.com | RADS-DS + RISKDS |
-| Nan Gao | — | RADS-DS + RISKDS (cross-team) |
-| Jasmine Dangjaros | jdangjaros@squareup.com | RISKDS [TL] |
-| Josh Madeira | jmadeira@squareup.com | RISKDS [TL] |
-| Shaotian Zhang | shaotian@squareup.com | RISKDS |
-| Scott Santor | ssantor@squareup.com | CUSTDS |
-| Cassandra Milan | cmilan@squareup.com | CUSTDS |
-| Lucas Brandl | lbrandl@squareup.com | CUSTDS |
-| Cressida Stapleton | cstapleton@squareup.com | CUSTDS |
-| Janice Jiang | jiaojiang@squareup.com | CUSTDS (child of RADS-DS) |
-| Jeff Cheng | jeffc@squareup.com | SPDS (not CUSTDS despite org chart) |
-| Kara Downey | kdowney@squareup.com | SPDS |
-| Mariana Echeverria | mecheverria@squareup.com | SPDS |
+#### People
+**Loaded from:** `/Users/dbroesch/development/project management/team-config.json`
+
+Do not duplicate member data here — read from the config file at runtime. The file contains names, Linear login handles, emails, Slack IDs, and team assignments for all 13 members plus the manager.
 
 #### RADS-Specific Workflow States
 - **"Below the Line"** — custom RADS state; de-prioritized cycle issues. Use `canceled` CSS class, include in Issues count, exclude from Done/In Progress/Pts.

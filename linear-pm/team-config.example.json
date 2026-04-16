@@ -1,0 +1,29 @@
+{
+  "_comment": "Copy this to team-config.json in your project directory and fill in your team's details.",
+  "manager": {
+    "name": "Your Name",
+    "email": "you@company.com",
+    "slack_id": "UXXXXXXXX"
+  },
+  "members": [
+    {
+      "name": "Alice Smith",
+      "login": "asmith",
+      "email": "asmith@company.com",
+      "slack_id": "UXXXXXXXX",
+      "slack_email": "asmith@company.com",
+      "teams": ["TEAM-A", "TEAM-B"],
+      "role": "TL"
+    },
+    {
+      "name": "Bob Jones",
+      "login": "bjones",
+      "email": "bjones@company.com",
+      "slack_id": null,
+      "slack_email": "bjones@company.com",
+      "teams": ["TEAM-A"],
+      "team_label": "TEAM-A (Custom label)",
+      "note": "Optional note, e.g. uses @other-domain.com for Slack"
+    }
+  ]
+}

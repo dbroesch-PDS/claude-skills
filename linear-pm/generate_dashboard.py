@@ -4,10 +4,20 @@ RADS Q2 2026 Status Dashboard Generator
 Fetches live data from Linear's GraphQL API and regenerates rads-q2-2026-status.html
 
 Usage:
-    LINEAR_API_KEY=lin_api_xxx python3 generate_dashboard.py
+    # With Linear API key (direct fetch):
+    LINEAR_API_KEY=lin_api_xxx python3 generate_dashboard.py [--deploy]
 
-Get a Linear personal API key at:
-    https://linear.app/settings/api  →  Personal API keys
+    # With pre-fetched data JSON (no API key needed — use Linear MCP to populate):
+    python3 generate_dashboard.py --data-file /tmp/linear_data.json [--deploy]
+
+    # JSON format for --data-file:
+    # {
+    #   "projects":   [ { ...project fields..., "_update": {...} | null } ],
+    #   "all_issues": [ { ...issue fields..., "_team": "RADS-DS" } ],
+    #   "sprint":     { "name": "Sprint 1", "label": "Apr 6 – Apr 20, 2026",
+    #                   "start": "2026-04-06T00:00:00+00:00",
+    #                   "end":   "2026-04-20T00:00:00+00:00" }
+    # }
 """
 
 import os, sys, re, math, json, argparse, tempfile, zipfile, shutil
@@ -37,9 +47,31 @@ TEAMS = {
 
 PDT = timezone(timedelta(hours=-7))  # Pacific Daylight Time (Apr–Oct)
 
-MEMBERS = [
+def _load_members_from_config() -> list:
+    """Load MEMBERS from team-config.json next to this script, if present."""
+    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "team-config.json")
+    if not os.path.exists(config_path):
+        return None
+    with open(config_path) as f:
+        config = json.load(f)
+    result = []
+    for m in config.get("members", []):
+        name   = m["name"]
+        role   = m.get("role", "")
+        teams  = m.get("teams", [])
+        result.append({
+            "id":         m["login"],
+            "name_match": name,
+            "display":    f"{name} [{role}]" if role else name,
+            "email":      m.get("email"),
+            "team_label": m.get("team_label") or " + ".join(teams),
+            "cycle_keys": teams,
+        })
+    return result
+
+MEMBERS = _load_members_from_config() or [
     {"id": "victor",    "name_match": "Victor Garcia",     "display": "Victor Garcia",          "email": "victorg@squareup.com",    "team_label": "RADS-DS + RISKDS",        "cycle_keys": ["RADS-DS", "RISKDS"]},
-    {"id": "nan",       "name_match": "Nan Gao",            "display": "Nan Gao",                "email": None,                       "team_label": "RADS-DS + RISKDS",        "cycle_keys": ["RADS-DS", "RISKDS"], "note": "cross-team contributor"},
+    {"id": "nan",       "name_match": "Nan Gao",            "display": "Nan Gao",                "email": None,                       "team_label": "RADS-DS + RISKDS",        "cycle_keys": ["RADS-DS", "RISKDS"]},
     {"id": "jasmine",   "name_match": "Jasmine Dangjaros",  "display": "Jasmine Dangjaros [TL]", "email": "jdangjaros@squareup.com", "team_label": "RISKDS",                  "cycle_keys": ["RISKDS"]},
     {"id": "josh",      "name_match": "Josh Madeira",       "display": "Josh Madeira [TL]",      "email": "jmadeira@squareup.com",   "team_label": "RISKDS (Disputes PDS)",   "cycle_keys": ["RISKDS"]},
     {"id": "shaotian",  "name_match": "Shaotian Zhang",     "display": "Shaotian Zhang",         "email": "shaotian@squareup.com",   "team_label": "RISKDS",                  "cycle_keys": ["RISKDS"]},
@@ -697,14 +729,21 @@ def render_tab1(projects: list) -> str:
 # ─── TAB 2: TEAM & SPRINT ─────────────────────────────────────────────────────
 
 def render_issue_row(issue: dict) -> str:
-    ident = _html.escape(issue.get("identifier", ""))
-    url   = issue.get("url", "#")
-    title = _html.escape(issue.get("title", ""))
-    proj  = _html.escape((issue.get("project") or {}).get("name", "—"))
+    ident  = _html.escape(issue.get("identifier", ""))
+    url    = issue.get("url", "#")
+    title  = _html.escape(issue.get("title", ""))
+    proj   = _html.escape((issue.get("project") or {}).get("name", "—"))
+    labels = classify_labels(issue)
+    label_html = "".join(
+        f'<span style="padding:0.1rem 0.4rem;border-radius:999px;font-size:0.7rem;'
+        f'background:{LABEL_COLORS[l]}22;border:1px solid {LABEL_COLORS[l]}66;color:{LABEL_COLORS[l]};'
+        f'white-space:nowrap;margin-right:0.2rem;">{l}</span>'
+        for l in labels
+    ) if labels else '<span style="color:var(--muted);font-size:0.75rem;">—</span>'
     return (f'<tr><td><a class="issue-link" href="{url}" target="_blank">{ident}</a></td>'
             f'<td>{title}</td><td>{state_pill(issue)}</td>'
             f'<td>{priority_html(issue.get("priority"))}</td>'
-            f'<td>{pts_html(issue)}</td><td>{proj}</td></tr>')
+            f'<td>{pts_html(issue)}</td><td>{proj}</td><td>{label_html}</td></tr>')
 
 def render_member_card(member: dict, issues: list) -> str:
     stats = member_stats(issues)
@@ -729,6 +768,26 @@ def render_member_card(member: dict, issues: list) -> str:
       <div class="member-stat s-orange"><div class="s-num">{stats['in_progress']}</div><div class="s-label">In Progress</div></div>
       <div class="member-stat s-green"><div class="s-num">{pts_frac}</div><div class="s-label">Pts</div></div>
     </div>"""
+
+    # Label breakdown mini-row
+    active_issues = [i for i in issues if not is_canceled(i)]
+    label_counts = {lbl: sum(1 for i in active_issues if lbl in classify_labels(i)) for lbl in LABEL_CATEGORIES}
+    label_pills = "".join(
+        f'<span style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.15rem 0.55rem;border-radius:999px;'
+        f'background:{LABEL_COLORS[lbl]}22;border:1px solid {LABEL_COLORS[lbl]}66;'
+        f'font-size:0.72rem;color:{LABEL_COLORS[lbl]};margin-right:0.35rem;">'
+        f'<strong>{label_counts[lbl]}</strong>&nbsp;{lbl}</span>'
+        for lbl in LABEL_CATEGORIES
+    )
+    unlabeled_count = sum(1 for i in active_issues if not classify_labels(i))
+    if unlabeled_count:
+        label_pills += (
+            f'<span style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.15rem 0.55rem;border-radius:999px;'
+            f'background:#8b91b022;border:1px solid #8b91b066;'
+            f'font-size:0.72rem;color:var(--muted);margin-right:0.35rem;">'
+            f'<strong>{unlabeled_count}</strong>&nbsp;Unlabeled</span>'
+        )
+    label_row = f'<div style="margin-top:0.6rem;margin-bottom:0.2rem;">{label_pills}</div>'
 
     # Issue table (all issues, canceled included but shown separately)
     sorted_issues = sorted(issues, key=lambda i: (
@@ -755,13 +814,14 @@ def render_member_card(member: dict, issues: list) -> str:
           <div>
             <div class="member-name">{display}{note_html}</div>
             <div class="member-email">{email_line}</div>
+            {label_row}
           </div>
           {badges}
         </div>
         <div class="member-body">
           {focus_html}
           <table class="issue-table">
-            <thead><tr><th>Issue</th><th>Title</th><th>Status</th><th>Priority</th><th>Pts</th><th>Project</th></tr></thead>
+            <thead><tr><th>Issue</th><th>Title</th><th>Status</th><th>Priority</th><th>Pts</th><th>Project</th><th>Label</th></tr></thead>
             <tbody>{rows}</tbody>
           </table>
         </div>
@@ -793,15 +853,19 @@ def render_all_members_table(members_data: list[tuple]) -> str:
     </div>
   </div>"""
 
-def render_tab2(members_data: list[tuple], all_issues: list) -> str:
+def render_tab2(members_data: list[tuple], unassigned_issues: list) -> str:
     today = datetime.now(timezone.utc)
     sprint_start = SPRINT["start"]
     sprint_end   = SPRINT["end"]
     sprint_day   = max(1, min(14, (today - sprint_start).days + 1))
     total_days   = (sprint_end - sprint_start).days
 
-    # Aggregate stats
-    active_all = [i for i in all_issues if not is_canceled(i)]
+    # Scoped issue set: whitelisted members + unassigned only
+    whitelisted = [i for _, iss in members_data for i in iss]
+    scoped_all  = whitelisted + unassigned_issues
+
+    # Aggregate stats (scoped)
+    active_all = [i for i in scoped_all if not is_canceled(i)]
     done_all   = [i for i in active_all if state_type(i) == "completed"]
     ip_all     = [i for i in active_all if state_type(i) == "started"]
     todo_all   = [i for i in active_all if state_type(i) in ("unstarted","backlog","triage")]
@@ -819,6 +883,45 @@ def render_tab2(members_data: list[tuple], all_issues: list) -> str:
     no_issues_note = ""
     if no_issues_members:
         no_issues_note = f"Members with no sprint cycle issues: {', '.join(_html.escape(n) for n in no_issues_members)}."
+
+    # Unassigned section
+    active_unassigned = [i for i in unassigned_issues if not is_canceled(i)]
+    unassigned_section = ""
+    if active_unassigned:
+        ua_stats = member_stats(active_unassigned)
+        ua_pts_frac = f"{ua_stats['done_pts']}/{ua_stats['total_pts']}" if ua_stats['total_pts'] else "—"
+        ua_badges = f"""<div class="member-stats">
+      <div class="member-stat s-blue"><div class="s-num">{ua_stats['total']}</div><div class="s-label">Issues</div></div>
+      <div class="member-stat s-green"><div class="s-num">{ua_stats['done']}</div><div class="s-label">Done</div></div>
+      <div class="member-stat s-orange"><div class="s-num">{ua_stats['in_progress']}</div><div class="s-label">In Progress</div></div>
+      <div class="member-stat s-green"><div class="s-num">{ua_pts_frac}</div><div class="s-label">Pts</div></div>
+    </div>"""
+        ua_sorted = sorted(active_unassigned, key=lambda i: (
+            0 if state_type(i) == "completed" else
+            1 if state_type(i) == "started" else
+            2 if state_type(i) not in ("completed","started","cancelled") else 3
+        ))
+        ua_rows = "".join(render_issue_row(i) for i in ua_sorted)
+        unassigned_section = f"""  <div class="team-section">
+    <h2>Unassigned Sprint Issues</h2>
+    <div class="member-cards">
+      <div class="member-card">
+        <div class="member-header">
+          <div>
+            <div class="member-name">Unassigned</div>
+            <div class="member-email">No owner — needs triage</div>
+          </div>
+          {ua_badges}
+        </div>
+        <div class="member-body">
+          <table class="issue-table">
+            <thead><tr><th>Issue</th><th>Title</th><th>Status</th><th>Priority</th><th>Pts</th><th>Project</th><th>Label</th></tr></thead>
+            <tbody>{ua_rows}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>"""
 
     return f"""<div id="tab-team" class="tab-pane">
   <div class="team-section">
@@ -852,6 +955,7 @@ def render_tab2(members_data: list[tuple], all_issues: list) -> str:
     </div>
   </div>
 {all_members_table}
+{unassigned_section}
 </div>"""
 
 # ─── TAB 3: WORK DISTRIBUTION ─────────────────────────────────────────────────
@@ -935,6 +1039,29 @@ def render_tab3(all_issues: list) -> str:
 
     label_tables = "\n".join(render_label_table(active, lbl) for lbl in LABEL_CATEGORIES)
 
+    # Unlabeled section
+    unlabeled = [i for i in active if not classify_labels(i)]
+    unlabeled_table = ""
+    if unlabeled:
+        rows = "".join(
+            f'<tr><td><a class="issue-link" href="{i.get("url","#")}" target="_blank">{_html.escape(i.get("identifier",""))}</a></td>'
+            f'<td>{_html.escape(i.get("title",""))}</td>'
+            f'<td>{state_pill(i)}</td>'
+            f'<td>{_html.escape((i.get("assignee") or {}).get("name","—"))}</td>'
+            f'<td>{pts_html(i)}</td>'
+            f'<td>{_html.escape(i.get("_team",""))}</td></tr>'
+            for i in sorted(unlabeled, key=lambda x: (x.get("_team",""), (x.get("assignee") or {}).get("name","")))
+        )
+        unlabeled_table = f"""  <div class="team-section">
+    <h2>Unlabeled <span style="font-size:0.85rem; font-weight:400; color:var(--muted);">— {len(unlabeled)} issues with no work-type label</span></h2>
+    <div style="overflow-x:auto;">
+      <table class="issue-table" style="width:100%;">
+        <thead><tr><th>Issue</th><th>Title</th><th>Status</th><th>Assignee</th><th>Pts</th><th>Team</th></tr></thead>
+        <tbody>{rows}</tbody>
+      </table>
+    </div>
+  </div>"""
+
     return f"""<div id="tab-labels" class="tab-pane">
   <div class="team-section">
     <h2>Work Distribution by Label — {SPRINT['name']} (All Teams)</h2>
@@ -955,6 +1082,7 @@ def render_tab3(all_issues: list) -> str:
     </div>
   </div>
 {label_tables}
+{unlabeled_table}
 </div>"""
 
 # ─── FULL HTML ─────────────────────────────────────────────────────────────────
@@ -976,6 +1104,7 @@ CSS = """
     header { max-width: 1100px; margin: 0 auto 1.5rem; padding-bottom: 1.2rem; border-bottom: 1px solid var(--border); }
     header h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.3rem; }
     header p { color: var(--muted); font-size: 0.9rem; }
+    .last-updated { color: var(--green); font-weight: 500; }
     .legend { display: flex; gap: 1.5rem; margin-top: 1rem; flex-wrap: wrap; }
     .legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--muted); }
     .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
@@ -1102,7 +1231,8 @@ JS = """
 def render_html(tab1: str, tab2: str, tab3: str) -> str:
     now = datetime.now(PDT)
     month_names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-    gen_date = f"{month_names[now.month-1]} {now.day}, {now.year}"
+    gen_date     = f"{month_names[now.month-1]} {now.day}, {now.year}"
+    gen_datetime = f"{month_names[now.month-1]} {now.day}, {now.year} at {now.strftime('%-I:%M %p')} PT"
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1115,7 +1245,7 @@ def render_html(tab1: str, tab2: str, tab3: str) -> str:
 
 <header>
   <h1>RADS Q2 2026 — Status Dashboard</h1>
-  <p>Initiative: <strong>RADS Q2 2026 initiatives</strong> &nbsp;·&nbsp; Owner: David Broesch &nbsp;·&nbsp; Generated: {gen_date}</p>
+  <p>Initiative: <strong>RADS Q2 2026 initiatives</strong> &nbsp;·&nbsp; Owner: David Broesch &nbsp;·&nbsp; <span class="last-updated">&#x25CF; Last updated: {gen_datetime}</span></p>
 </header>
 
 <div class="tab-bar">
@@ -1129,7 +1259,7 @@ def render_html(tab1: str, tab2: str, tab3: str) -> str:
 {tab3}
 
 <footer style="max-width:1100px; margin: 2.5rem auto 0; padding-top: 1.5rem; border-top: 1px solid var(--border); font-size: 0.78rem; color: var(--muted); text-align: center;">
-  Data sourced from Linear · RADS Q2 2026 initiatives · {SPRINT['name']} ({SPRINT['label']}) · Report generated {gen_date}
+  Data sourced from Linear · RADS Q2 2026 initiatives · {SPRINT['name']} ({SPRINT['label']}) · Last updated {gen_datetime}
 </footer>
 
 <script>{JS}</script>
@@ -1184,23 +1314,60 @@ def deploy_to_blockcell(html_path: str) -> None:
 def main():
     parser = argparse.ArgumentParser(description="RADS Q2 2026 Dashboard Generator")
     parser.add_argument("--deploy", action="store_true", help="Deploy to Blockcell after generating (requires WARP VPN)")
+    parser.add_argument("--data-file", metavar="PATH", help="Load pre-fetched Linear data from JSON (skips API key requirement)")
     args = parser.parse_args()
 
     print("RADS Q2 2026 Dashboard Generator")
     print("=" * 40)
 
-    # 1. Fetch projects + sprint issues in parallel
-    print("\nFetching projects and sprint issues in parallel...")
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        projects_future = pool.submit(fetch_projects)
-        issues_future   = pool.submit(fetch_all_sprint_issues)
-        projects  = projects_future.result()
-        all_issues = issues_future.result()
-    print(f"  {len(projects)} projects · {len(all_issues)} sprint issues")
+    if args.data_file:
+        # Load pre-fetched data — no API key needed
+        print(f"\nLoading pre-fetched data from {args.data_file}...")
+        with open(args.data_file, encoding="utf-8") as f:
+            saved = json.load(f)
+        projects   = saved["projects"]
+        all_issues = saved["all_issues"]
 
-    # 2. Fetch status updates for all projects in parallel
-    print("\nFetching status updates (parallel)...")
-    fetch_updates_parallel(projects)
+        # Normalize MCP field shapes that differ from direct API format
+        _status_to_camel = {
+            "In Progress": "inProgress", "Paused": "paused", "Planned": "planned",
+            "Completed": "completed", "Cancelled": "cancelled", "Started": "inProgress",
+        }
+        for p in projects:
+            if isinstance(p.get("priority"), dict):
+                p["priority"] = p["priority"].get("value", 0)
+            if isinstance(p.get("status"), dict):
+                name = p["status"].get("name", "")
+                p["status"] = _status_to_camel.get(name, name)
+
+        # Deduplicate issues by id/identifier (MCP fetches can overlap across teams)
+        _seen_ids: set = set()
+        _deduped = []
+        for _i in all_issues:
+            _key = _i.get("id") or _i.get("identifier")
+            if _key and _key not in _seen_ids:
+                _seen_ids.add(_key)
+                _deduped.append(_i)
+        all_issues = _deduped
+        sprint_raw = saved.get("sprint", {})
+        SPRINT["name"]  = sprint_raw.get("name", "")
+        SPRINT["label"] = sprint_raw.get("label", "")
+        SPRINT["start"] = datetime.fromisoformat(sprint_raw["start"]) if sprint_raw.get("start") else None
+        SPRINT["end"]   = datetime.fromisoformat(sprint_raw["end"])   if sprint_raw.get("end")   else None
+        print(f"  {len(projects)} projects · {len(all_issues)} sprint issues")
+    else:
+        # 1. Fetch projects + sprint issues in parallel
+        print("\nFetching projects and sprint issues in parallel...")
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            projects_future = pool.submit(fetch_projects)
+            issues_future   = pool.submit(fetch_all_sprint_issues)
+            projects  = projects_future.result()
+            all_issues = issues_future.result()
+        print(f"  {len(projects)} projects · {len(all_issues)} sprint issues")
+
+        # 2. Fetch status updates for all projects in parallel
+        print("\nFetching status updates (parallel)...")
+        fetch_updates_parallel(projects)
 
     # 3. Group issues by member
     members_data = []
@@ -1211,10 +1378,16 @@ def main():
         ]
         members_data.append((member, member_issues))
 
+    # Unassigned issues: no assignee name, not matched to any whitelisted member
+    unassigned_issues = [
+        i for i in all_issues
+        if not (i.get("assignee") or {}).get("name")
+    ]
+
     # 4. Render tabs
     print("\nGenerating HTML...")
     tab1 = render_tab1(projects)
-    tab2 = render_tab2(members_data, all_issues)
+    tab2 = render_tab2(members_data, unassigned_issues)
     tab3 = render_tab3(all_issues)
     html = render_html(tab1, tab2, tab3)
 
