@@ -75,7 +75,9 @@ Query by UUID, not slug:
 Fetching all teams can be slow. Prefer extracting `team { id key }` from project or issue results when you already have a project in scope. Or use the Saved Team Configurations section below.
 
 ### Large Result Sets
-Use narrow GraphQL selection sets (`first: 50`, `after` cursor for pagination) rather than fetching everything at once. Request only the fields you need.
+Use narrow GraphQL selection sets (`first: 100`, `after` cursor for pagination) rather than fetching everything at once. Request only the fields you need.
+
+**⚠️ Cycle queries must be paginated.** Active cycles in large teams (e.g. RISKDS) can have 100–200+ issues. A query with `first: 50` and no pagination will silently drop issues — members' cards will be missing tickets with no error. Always request `pageInfo { hasNextPage endCursor }` and loop until `hasNextPage` is false. Use `first: 100` per page.
 
 ---
 
@@ -177,10 +179,10 @@ The bottom of Tab 2 has a summary table with one row per person. **Every time yo
 Run this process for each member when auditing or refreshing the dashboard:
 
 1. **Identify the correct cycle UUID** for the member's team (see Saved Configs below, or query `team(id: "<id>") { cycles(filter: { isActive: { eq: true } }) { nodes { id } } }`).
-2. Query all cycle issues for the team:
+2. Query all cycle issues for the team — **must paginate**, large cycles (e.g. RISKDS) have 100–200+ issues and will silently drop data without pagination:
    ```bash
    sq agent-tools linear execute-readonly-query \
-     --query 'query($cycleId: String!) { cycle(id: $cycleId) { issues { nodes { id identifier title archivedAt state { name type } assignee { displayName } estimate { value } } } } }' \
+     --query 'query($cycleId: String!) { cycle(id: $cycleId) { issues(first: 100) { pageInfo { hasNextPage endCursor } nodes { id identifier title archivedAt state { name type } assignee { displayName } estimate } } } }' \
      --variables '{"cycleId":"<cycle-uuid>"}'
    ```
 3. **Drop archived issues** — filter out any where `archivedAt` is non-null.

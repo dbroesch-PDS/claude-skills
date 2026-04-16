@@ -1388,7 +1388,13 @@ def main():
     print("\nGenerating HTML...")
     tab1 = render_tab1(projects)
     tab2 = render_tab2(members_data, unassigned_issues)
-    tab3 = render_tab3(all_issues)
+    whitelisted_names = {m["name_match"].lower() for m in MEMBERS}
+    scoped_tab3 = [
+        i for i in all_issues
+        if not (i.get("assignee") or {}).get("name")
+        or (i.get("assignee") or {}).get("name", "").lower() in whitelisted_names
+    ]
+    tab3 = render_tab3(scoped_tab3)
     html = render_html(tab1, tab2, tab3)
 
     # 5. Write output
