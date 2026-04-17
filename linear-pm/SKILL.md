@@ -91,6 +91,81 @@ David maintains single-file HTML sprint dashboards for his teams. The pattern is
 ```
 Example: `rads-q2-2026-status.html`
 
+### Refreshing an Existing Dashboard (Fast Path — use this for RADS)
+
+**DO NOT** manually edit the HTML or use a general-purpose agent. Use the script pipeline:
+
+```
+fetch issues via MCP → compile_dashboard_data.py → generate_dashboard.py --data-file → deploy
+```
+
+The scripts live at `/Users/dbroesch/development/project management/`:
+- `compile_dashboard_data.py` — transforms MCP output to script-ready JSON
+- `generate_dashboard.py` — renders HTML + deploys to Blockcell
+
+**Full refresh procedure (30–60 sec of tool calls, ~2 min total):**
+
+**1. Fetch cycle issues** — fire all 4 in a single parallel message using `mcp__claude_ai_Linear__list_issues`:
+
+| Team | Cycle UUID | Params |
+|------|-----------|--------|
+| RADS-DS | `e59aece4-90df-45fe-82cb-8c92311ad479` | `limit=250, includeArchived=true` |
+| RISKDS  | `4422c2db-982d-4f1b-9ffc-a84f199f1ef1` | `limit=250, includeArchived=true` |
+| CUSTDS  | `d2c218f5-dbf7-4300-9876-01ad32b80e8e` | `limit=250, includeArchived=true` |
+| SPDS    | `22b97d24-9249-4ebf-8895-1c5a67e5588a` | `limit=250, includeArchived=true` |
+
+Large results are auto-saved to `~/.claude/projects/-Users-dbroesch/<session-id>/tool-results/<id>.txt`.
+File format: `[{"type": "text", "text": "{\"issues\": [...]}"}]`
+
+**Pagination:** RADS-DS regularly has 300–400+ issues. Always check `hasNextPage` in the saved file and fetch a second page with the `cursor` value if needed.
+
+**Proxy errors:** RISKDS/CUSTDS/SPDS sometimes fail on first attempt — just retry the failures in the next message.
+
+**RADS-DS cycle behavior:** It acts as a cross-team superset containing issues from all 4 teams. After deduplication ~340 unique issues remain. This is expected.
+
+**2. Fetch projects:**
+```python
+mcp__claude_ai_Linear__list_projects(
+    initiative="eb75cdf5-ba66-4701-8282-0633fc4c45d2",
+    limit=50
+    # DO NOT use includeMembers=True — causes "query too complex" error
+)
+```
+
+**3. Fetch status updates** — fire all project UUIDs in a single parallel message using
+`mcp__claude_ai_Linear__get_status_updates(type="project", project="<uuid>", limit=1, orderBy="updatedAt")`.
+Expect ~5–6 proxy failures on first attempt; retry only those.
+
+**4. Update `compile_dashboard_data.py`** — set `ISSUE_FILES` to the saved MCP file paths from step 1.
+Update `SPRINT` dates if it's a new sprint (must include timezone: `"2026-04-06T00:00:00+00:00"`).
+
+**5. Build `/tmp/projects_data.json`** — write a JSON array of project objects. Labels can be plain
+string arrays; the compile script normalizes them. See CONTEXT.md for full schema.
+
+**6. Run:**
+```bash
+python3 compile_dashboard_data.py
+python3 generate_dashboard.py --data-file /tmp/linear_data.json --deploy
+```
+
+### MCP → Script Format Transformations
+
+`compile_dashboard_data.py` handles these automatically, but know them if debugging:
+
+| Field | MCP returns | Script expects |
+|-------|------------|----------------|
+| Issue `status` | `"In Progress"` (string) | `state: {name: "...", type: "started"}` |
+| Issue `assignee` | `"Victor Garcia"` (string) | `{name: "Victor Garcia"}` (dict) |
+| Issue `labels` | `["Analysis"]` (string array) | `{nodes: [{name: "Analysis"}]}` |
+| Project `labels` | `["KTLO"]` (string array) | `{nodes: [{name: "KTLO"}]}` |
+| Sprint dates | `"2026-04-06"` | `"2026-04-06T00:00:00+00:00"` (needs tz) |
+
+Status → `state.type` mapping:
+- `"Done"` → `"completed"`
+- `"In Progress"` / `"In Review"` / `"Blocked"` → `"started"`
+- `"To-do"` / `"Below the Line"` → `"unstarted"`
+- `"Canceled"` → `"cancelled"`
+
 ### Tab Structure
 - **Tab 1 — Projects:** One card per initiative project. DRI, health status, latest weekly update verbatim, late-update flag.
 - **Tab 2 — Team & Sprint:** Sprint burndown SVG (cross-team), collapsible per-person member cards, all-members summary table.
