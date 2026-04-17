@@ -139,6 +139,11 @@ Expect ~5–6 proxy failures on first attempt; retry only those.
 **4. Update `compile_dashboard_data.py`** — set `ISSUE_FILES` to the saved MCP file paths from step 1.
 Update `SPRINT` dates if it's a new sprint (must include timezone: `"2026-04-06T00:00:00+00:00"`).
 
+Also update `Q2_ISSUE_FILES` for the Q2 completed donut (Tab 3, chart 2):
+- **Sprint 1:** set `Q2_ISSUE_FILES = None` (falls back to current sprint data — same thing)
+- **Sprint 2+:** set `Q2_ISSUE_FILES` to the combined list of ALL Q2 sprint issue files so the
+  "Q2 2026 — Completed Tasks" donut accumulates completions across the whole quarter.
+
 **5. Build `/tmp/projects_data.json`** — write a JSON array of project objects. Labels can be plain
 string arrays; the compile script normalizes them. See CONTEXT.md for full schema.
 
@@ -169,7 +174,7 @@ Status → `state.type` mapping:
 ### Tab Structure
 - **Tab 1 — Projects:** One card per initiative project. DRI, health status, latest weekly update verbatim, late-update flag.
 - **Tab 2 — Team & Sprint:** Sprint burndown SVG (cross-team), collapsible per-person member cards, all-members summary table.
-- **Tab 3 — Work Distribution:** Label breakdown with donut pie charts. Labels are team-specific (e.g., for RADS-DS: Analysis / Automation / Infrastructure / KTLO).
+- **Tab 3 — Work Distribution:** Label breakdown with donut pie charts. Labels are team-specific (e.g., for RADS-DS: Analysis / Automation / Infrastructure / KTLO). Two donuts: (1) current sprint all labeled issues, (2) **Q2 2026 completed issues** — accumulated across all Q2 sprints via `q2_issues` in the data file.
 
 ### Setting Up a Dashboard for a New Team
 When the user asks to build a dashboard for a team or org not already configured:
