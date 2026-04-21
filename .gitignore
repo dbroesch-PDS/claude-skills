@@ -1,0 +1,18 @@
+# Eval workspaces and iteration outputs
+*-workspace/
+evals/
+*/evals/
+
+# Non-skill infrastructure
+agents/
+assets/
+eval-viewer/
+references/
+scripts/
+*/scripts/
+__pycache__/
+*/__pycache__/
+
+# Root-level meta files (not a skill)
+SKILL.md
+LICENSE.txt

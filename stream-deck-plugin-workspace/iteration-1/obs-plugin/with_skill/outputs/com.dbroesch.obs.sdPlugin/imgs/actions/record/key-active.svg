@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">
-  <rect width="144" height="144" rx="16" fill="#2a0a0a"/>
-  <!-- Recording active — pulsing red bg -->
-  <circle cx="72" cy="60" r="32" fill="#ed4245" opacity="0.25"/>
-  <!-- Stop square -->
-  <rect x="52" y="40" width="40" height="40" rx="4" fill="#ed4245"/>
-  <!-- Label -->
-  <text x="72" y="112" font-family="-apple-system, sans-serif" font-size="20" font-weight="600" fill="#ed4245" text-anchor="middle">STOP</text>
-</svg>
