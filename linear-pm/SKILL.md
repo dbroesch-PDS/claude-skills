@@ -105,51 +105,66 @@ The scripts live at `/Users/dbroesch/development/project management/`:
 
 **Full refresh procedure (30–60 sec of tool calls, ~2 min total):**
 
-**1. Fetch cycle issues** — fire all 4 in a single parallel message using `mcp__claude_ai_Linear__list_issues`:
+**1. Auto-detect active cycles** — always query live, never trust saved UUIDs across sprints:
 
-| Team | Cycle UUID | Params |
-|------|-----------|--------|
-| RADS-DS | `e59aece4-90df-45fe-82cb-8c92311ad479` | `limit=250, includeArchived=true` |
-| RISKDS  | `4422c2db-982d-4f1b-9ffc-a84f199f1ef1` | `limit=250, includeArchived=true` |
-| CUSTDS  | `d2c218f5-dbf7-4300-9876-01ad32b80e8e` | `limit=250, includeArchived=true` |
-| SPDS    | `22b97d24-9249-4ebf-8895-1c5a67e5588a` | `limit=250, includeArchived=true` |
-
-Large results are auto-saved to `~/.claude/projects/-Users-dbroesch/<session-id>/tool-results/<id>.txt`.
-File format: `[{"type": "text", "text": "{\"issues\": [...]}"}]`
-
-**Pagination:** RADS-DS regularly has 300–400+ issues. Always check `hasNextPage` in the saved file and fetch a second page with the `cursor` value if needed.
-
-**Proxy errors:** RISKDS/CUSTDS/SPDS sometimes fail on first attempt — just retry the failures in the next message.
-
-**RADS-DS cycle behavior:** It acts as a cross-team superset containing issues from all 4 teams. After deduplication ~340 unique issues remain. This is expected.
-
-**2. Fetch projects:**
-```python
-mcp__claude_ai_Linear__list_projects(
-    initiative="eb75cdf5-ba66-4701-8282-0633fc4c45d2",
-    limit=50
-    # DO NOT use includeMembers=True — causes "query too complex" error
-)
+```bash
+sq agent-tools linear execute-readonly-query \
+  --query 'query { rads: team(id: "e05affa1-a584-4141-94c8-8ec9ca52248e") { cycles(filter: { isActive: { eq: true } }) { nodes { id name number startsAt endsAt } } } riskds: team(id: "80e52023-7780-4dde-9234-64567fc4453e") { cycles(filter: { isActive: { eq: true } }) { nodes { id name number startsAt endsAt } } } custds: team(id: "0f2a0619-8b8c-490e-98da-7fb25874f979") { cycles(filter: { isActive: { eq: true } }) { nodes { id name number startsAt endsAt } } } spds: team(id: "9a4369f9-7d50-4a51-9018-778c5d842101") { cycles(filter: { isActive: { eq: true } }) { nodes { id name number startsAt endsAt } } } }'
 ```
 
-**3. Fetch status updates** — fire all project UUIDs in a single parallel message using
-`mcp__claude_ai_Linear__get_status_updates(type="project", project="<uuid>", limit=1, orderBy="updatedAt")`.
-Expect ~5–6 proxy failures on first attempt; retry only those.
+Extract the `id`, `startsAt`, and `endsAt` from each team's result. Use these cycle UUIDs for all subsequent issue queries. Update the Saved Team Configurations section with the new cycle UUIDs and mark the previous sprint as ENDED.
 
-**4. Update `compile_dashboard_data.py`** — set `ISSUE_FILES` to the saved MCP file paths from step 1.
-Update `SPRINT` dates if it's a new sprint (must include timezone: `"2026-04-06T00:00:00+00:00"`).
+**Sprint name/label:** derive from the cycle number and dates (e.g. cycle number 2, Apr 20–May 4 → "Sprint 2", "Apr 20 – May 4, 2026"). If cycle `name` is set in Linear, prefer that.
 
-Also update `Q2_ISSUE_FILES` for the Q2 completed donut (Tab 3, chart 2):
-- **Sprint 1:** set `Q2_ISSUE_FILES = None` (falls back to current sprint data — same thing)
-- **Sprint 2+:** set `Q2_ISSUE_FILES` to the combined list of ALL Q2 sprint issue files so the
-  "Q2 2026 — Completed Tasks" donut accumulates completions across the whole quarter.
+**2. Fetch cycle issues** — fire all 4 in parallel using the UUIDs from step 1:
 
-**5. Build `/tmp/projects_data.json`** — write a JSON array of project objects. Labels can be plain
-string arrays; the compile script normalizes them. See CONTEXT.md for full schema.
+```bash
+sq agent-tools linear execute-readonly-query \
+  --query 'query($cycleId: String!, $after: String) { cycle(id: $cycleId) { id name startsAt endsAt issues(first: 100, after: $after, includeArchived: true) { pageInfo { hasNextPage endCursor } nodes { id identifier title archivedAt dueDate url estimate state { name type } assignee { displayName } labels { nodes { name } } } } } }' \
+  --variables '{"cycleId":"<uuid>"}' > /tmp/<team>_issues_p1.json
+```
+
+**Pagination:** always check `hasNextPage` and fetch additional pages with `endCursor` until false.
+
+**3. Fetch projects:**
+
+```bash
+sq agent-tools linear execute-readonly-query \
+  --query 'query { projects(filter: { initiatives: { id: { eq: "eb75cdf5-ba66-4701-8282-0633fc4c45d2" } } }, first: 50) { nodes { id name url status { name } priority targetDate startDate updatedAt lead { displayName } labels { nodes { name } } } } }'
+```
+
+**4. Fetch status updates** — fire all project UUIDs in parallel (use `ID!` not `String!`):
+
+```bash
+sq agent-tools linear execute-readonly-query \
+  --query 'query($pid: ID!) { projectUpdates(filter: { project: { id: { eq: $pid } } }, orderBy: createdAt, first: 1) { nodes { id body health createdAt diffMarkdown user { displayName } } } }' \
+  --variables '{"pid":"<project-uuid>"}'
+```
+
+Expect ~5–6 failures on first attempt — retry only failures in the next batch.
+
+**5. Build `/tmp/linear_data.json`** inline with a Python script (bypass `compile_dashboard_data.py`):
+
+- Merge all team issue files, deduplicate by `id`, filter `archivedAt`
+- Map `assignee.displayName` and project `lead.displayName` login handles → full names using `team-config.json`
+- Map project `lead.displayName` logins to full names using the login→name map from `team-config.json`
+- For **Sprint 1**: set `q2_issues: null`
+- For **Sprint 2+**: load the prior sprint's `all_issues` from the previous `/tmp/linear_data.json` (if still in `/tmp/`) and combine with current sprint issues for `q2_issues`; deduplicate by `id`
+
+Output schema:
+```json
+{
+  "projects": [...],
+  "all_issues": [...],
+  "sprint": {"name": "Sprint 2", "label": "Apr 20 – May 4, 2026",
+              "start": "2026-04-20T00:00:00+00:00", "end": "2026-05-04T23:59:59+00:00"},
+  "q2_issues": [...]
+}
+```
 
 **6. Run:**
 ```bash
-python3 compile_dashboard_data.py
+cd "/Users/dbroesch/development/project management"
 python3 generate_dashboard.py --data-file /tmp/linear_data.json --deploy
 ```
 
@@ -623,13 +638,21 @@ This section stores discovered team IDs, cycle IDs, and people for each org Davi
 | CustOps-DS | `CUSTDS` | `0f2a0619-8b8c-490e-98da-7fb25874f979` |
 | Support Product-DS | `SPDS` | `9a4369f9-7d50-4a51-9018-778c5d842101` |
 
-#### Sprint 1 Cycle IDs
+#### Sprint 1 Cycle IDs (Apr 6–20, 2026) — ENDED
 | Team | Cycle UUID |
 |---|---|
 | RADS-DS | `e59aece4-90df-45fe-82cb-8c92311ad479` |
 | RISKDS | `4422c2db-982d-4f1b-9ffc-a84f199f1ef1` |
 | CUSTDS | `d2c218f5-dbf7-4300-9876-01ad32b80e8e` |
 | SPDS | `22b97d24-9249-4ebf-8895-1c5a67e5588a` |
+
+#### Sprint 2 Cycle IDs (Apr 20 – May 4, 2026) — ACTIVE
+| Team | Cycle UUID |
+|---|---|
+| RADS-DS | `df036406-d025-4b12-ba44-99927abd24a4` |
+| RISKDS | `f09bccbd-a9e3-4bda-9110-a4eb084c7f7c` |
+| CUSTDS | `6e4a5d00-02c1-4ad3-a134-43bbe090e81b` |
+| SPDS | `fe5ac427-2560-406c-865c-48b5c0ccd481` |
 
 #### People
 **Loaded from:** `/Users/dbroesch/development/project management/team-config.json`
