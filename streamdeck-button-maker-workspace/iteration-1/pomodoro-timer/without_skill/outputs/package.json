@@ -1,0 +1,13 @@
+{
+  "name": "pomodoro-timer",
+  "version": "1.0.0",
+  "description": "Pomodoro timer for Stream Deck Plus — single button, no external APIs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@elgato-stream-deck/node": "^6.0.0",
+    "sharp": "^0.33.0"
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "skill_name": "linear-pm",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Create a Linear issue for the Risk Foundation team titled 'Audit fraud signal feature store for stale features'. Set priority to High. No assignee yet — I'll assign it later. Add a short description that this is a quarterly hygiene task to review all features in the store and flag any that haven't been updated in 90+ days.",
+      "expected_output": "Issue created (or tool call + mock response) with correct team, title, priority, description. No unnecessary clarifying questions. Returns issue ID/URL.",
+      "files": [],
+      "assertions": [
+        {
+          "text": "Attempts to call linear_create_issue or explicitly names it as the tool to use",
+          "passed": null,
+          "evidence": null
+        },
+        {
+          "text": "Includes correct team (Risk Foundation), title, and priority (High) in the action or explanation",
+          "passed": null,
+          "evidence": null
+        },
+        {
+          "text": "Includes a description about quarterly hygiene and 90+ day stale features",
+          "passed": null,
+          "evidence": null
+        },
+        {
+          "text": "Does not ask unnecessary clarifying questions before acting",
+          "passed": null,
+          "evidence": null
+        },
+        {
+          "text": "Returns or references what an issue ID/URL response would look like",
+          "passed": null,
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "It's sprint planning time. I want to scope out the next cycle for my team. Can you show me what's in the backlog and help me figure out what to pull in? I'd like to focus on high priority items first.",
+      "expected_output": "Multi-step cycle planning workflow: lists cycles, fetches backlog sorted by priority, offers to move items into cycle. Readable summary, not raw output.",
+      "files": [],
+      "assertions": [
+        {
+          "text": "Outlines or executes a multi-step workflow: list cycles, fetch backlog, surface high-priority items",
+          "passed": null,
+          "evidence": null
+        },
+        {
+          "text": "Presents issues grouped or ordered by priority (high first)",
+          "passed": null,
+          "evidence": null
+        },
+        {
+          "text": "Offers to move items into the next cycle rather than just describing what the user could do themselves",
+          "passed": null,
+          "evidence": null
+        },
+        {
+          "text": "Does not dump raw API/JSON output without summarizing or interpreting it",
+          "passed": null,
+          "evidence": null
+        },
+        {
+          "text": "Mentions or asks which team to scope the cycle for",
+          "passed": null,
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Quick standup check — what issues are currently In Progress on my team? I want to see if anything is blocked or hasn't moved in a while.",
+      "expected_output": "Fetches In Progress issues, presents them clearly, flags stale/blocked items. Concise enough for standup use.",
+      "files": [],
+      "assertions": [
+        {
+          "text": "Attempts linear_list_issues with an In Progress state filter, or explicitly describes doing so",
+          "passed": null,
+          "evidence": null
+        },
+        {
+          "text": "Response is structured and readable — not a raw JSON dump",
+          "passed": null,
+          "evidence": null
+        },
+        {
+          "text": "Calls out or flags any items that appear blocked or stale",
+          "passed": null,
+          "evidence": null
+        },
+        {
+          "text": "Response is concise enough to be useful in a standup context",
+          "passed": null,
+          "evidence": null
+        }
+      ]
+    }
+  ]
+}

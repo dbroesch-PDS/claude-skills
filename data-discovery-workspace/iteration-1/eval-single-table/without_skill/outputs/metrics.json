@@ -1,0 +1,24 @@
+{
+  "tool_calls": {
+    "ToolSearch": 3,
+    "Read": 5,
+    "Bash": 28,
+    "Grep": 3,
+    "mcp__claude_ai_Notion__notion-search": 11,
+    "mcp__claude_ai_Notion__notion-fetch": 9,
+    "mcp__claude_ai_Linear__list_issues": 1,
+    "Write": 2
+  },
+  "total_tool_calls": 62,
+  "total_steps": 22,
+  "files_created": 2,
+  "errors_encountered": [
+    "Snowflake connection not available — no snowflake-connector-python installed",
+    "mcp__claude_ai_Notion__notion-search with content_search_mode='ai_search' returned 400 (AI search not available for this workspace)",
+    "mcp__claude_ai_Notion__notion-fetch for AI-Gen Data Table Reference exceeded max token limit — read via file cache instead",
+    "mcp__claude_ai_Linear__list_issues result exceeded max token limit — searched via Grep for TXN_FLAGGED_EVENTS (0 matches)",
+    "Slack search for exact string 'TXN_FLAGGED_EVENTS' returned 0 results across all variations",
+    "GitHub code search for TXN_FLAGGED_EVENTS in squareup org returned 0 results",
+    "Bash permission denied on mkdir (resolved by using Write tool directly to create files)"
+  ]
+}

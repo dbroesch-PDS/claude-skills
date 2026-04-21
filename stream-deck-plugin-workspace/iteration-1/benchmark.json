@@ -1,0 +1,205 @@
+{
+  "metadata": {
+    "skill_name": "stream-deck-plugin",
+    "skill_path": "/Users/dbroesch/.claude/skills/stream-deck-plugin",
+    "timestamp": "2026-04-14T00:00:00Z",
+    "evals_run": ["obs-plugin", "system-stats-encoders", "github-pr-button"],
+    "runs_per_configuration": 1
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "eval_name": "obs-plugin",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 10,
+        "failed": 0,
+        "total": 10,
+        "time_seconds": 237.9,
+        "tokens": 43103,
+        "tool_calls": 32,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "manifest.json exists with UUID in reverse-DNS format", "passed": true, "evidence": "UUID: com.dbroesch.obs"},
+        {"text": "manifest.json contains all 4 action UUIDs (record, stream, mute, scene)", "passed": true, "evidence": "All 4 found in manifest"},
+        {"text": "manifest.json has CodePath pointing to bin/plugin.js", "passed": true, "evidence": "Exact match"},
+        {"text": "plugin.ts exists and calls streamDeck.connect()", "passed": true, "evidence": "Called on final line"},
+        {"text": "All 4 action TypeScript files exist", "passed": true, "evidence": "All in src/actions/"},
+        {"text": "Scene action uses setTitle() to show current scene name", "passed": true, "evidence": "action.setTitle(truncate(label, 12))"},
+        {"text": "rollup.config.mjs exists", "passed": true, "evidence": "Present at outputs root"},
+        {"text": "package.json includes @elgato/streamdeck dependency", "passed": true, "evidence": "^0.6.0"},
+        {"text": "No PKCE OAuth code included (not needed for OBS WebSocket)", "passed": true, "evidence": "OBS WebSocket v5 SHA-256 auth only"},
+        {"text": "OBS WebSocket connection logic is present", "passed": true, "evidence": "Full v5 client in obs-websocket.ts"}
+      ],
+      "notes": ["ws package used in obs-websocket.ts but not listed in package.json dependencies"]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "obs-plugin",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 10,
+        "failed": 0,
+        "total": 10,
+        "time_seconds": 274.9,
+        "tokens": 47122,
+        "tool_calls": 45,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "manifest.json exists with UUID in reverse-DNS format", "passed": true, "evidence": "UUID: com.dbroesch.obs"},
+        {"text": "manifest.json contains all 4 action UUIDs (record, stream, mute, scene)", "passed": true, "evidence": "All 4 found"},
+        {"text": "manifest.json has CodePath pointing to bin/plugin.js", "passed": true, "evidence": "Exact match"},
+        {"text": "plugin.ts exists and calls streamDeck.connect()", "passed": true, "evidence": "await streamDeck.connect() on line 35"},
+        {"text": "All 4 action TypeScript files exist", "passed": true, "evidence": "All confirmed"},
+        {"text": "Scene action uses setTitle() to show current scene name", "passed": true, "evidence": "actionInst.setTitle(label)"},
+        {"text": "rollup.config.mjs exists", "passed": true, "evidence": "Present"},
+        {"text": "package.json includes @elgato/streamdeck dependency", "passed": true, "evidence": "^0.6.0"},
+        {"text": "No PKCE OAuth code included (not needed for OBS WebSocket)", "passed": true, "evidence": "Zero matches for pkce/oauth"},
+        {"text": "OBS WebSocket connection logic is present", "passed": true, "evidence": "Full OBSClient using obs-websocket-js"}
+      ],
+      "notes": ["Baseline pulled in obs-websocket-js npm package; with_skill implemented protocol directly"]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "system-stats-encoders",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 9,
+        "failed": 0,
+        "total": 9,
+        "time_seconds": 150.4,
+        "tokens": 36861,
+        "tool_calls": 24,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "manifest.json has 3 encoder actions with Controllers including Encoder", "passed": true, "evidence": "All 3 have Controllers: [Encoder]"},
+        {"text": "Each encoder action has Encoder.layout set (e.g. $A1)", "passed": true, "evidence": "All use $A1"},
+        {"text": "Each action calls action.setFeedback() with an indicator field", "passed": true, "evidence": "setFeedback with indicator: {value, enabled} in all 3"},
+        {"text": "action.isDial() guard present before setFeedback calls", "passed": true, "evidence": "isDial() guard in update() and onWillAppear()"},
+        {"text": "Node os module used to read system stats", "passed": true, "evidence": "import os from node:os, uses os.cpus() os.totalmem() os.freemem()"},
+        {"text": "onDialDown triggers immediate stat refresh", "passed": true, "evidence": "onDialDown calls refreshStats() immediately"},
+        {"text": "Polling interval set up in plugin.ts", "passed": true, "evidence": "setInterval(refreshStats, 3000)"},
+        {"text": "plugin.ts calls await streamDeck.connect()", "passed": true, "evidence": "Final line of plugin.ts"},
+        {"text": "package.json and rollup.config.mjs present", "passed": true, "evidence": "Both files present"}
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "system-stats-encoders",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 9,
+        "failed": 0,
+        "total": 9,
+        "time_seconds": 301.1,
+        "tokens": 45084,
+        "tool_calls": 52,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "manifest.json has 3 encoder actions with Controllers including Encoder", "passed": true, "evidence": "All 3 correct"},
+        {"text": "Each encoder action has Encoder.layout set (e.g. $A1)", "passed": true, "evidence": "All use $A1"},
+        {"text": "Each action calls action.setFeedback() with an indicator field", "passed": true, "evidence": "setFeedback with indicator in all 3"},
+        {"text": "action.isDial() guard present before setFeedback calls", "passed": true, "evidence": "isDial() guard present"},
+        {"text": "Node os module used to read system stats", "passed": true, "evidence": "os.cpus() os.totalmem() os.freemem() netstat -ib"},
+        {"text": "onDialDown triggers immediate stat refresh", "passed": true, "evidence": "onDialDown calls stats.forceRefresh()"},
+        {"text": "Polling interval set up in plugin.ts", "passed": true, "evidence": "stats.start(3000)"},
+        {"text": "plugin.ts calls await streamDeck.connect()", "passed": true, "evidence": "Present"},
+        {"text": "package.json and rollup.config.mjs present", "passed": true, "evidence": "Both present"}
+      ],
+      "notes": ["Baseline took 2x longer (301s vs 150s) and used 22% more tokens for same result"]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "github-pr-button",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.889,
+        "passed": 8,
+        "failed": 1,
+        "total": 9,
+        "time_seconds": 217.6,
+        "tokens": 41077,
+        "tool_calls": 19,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "manifest.json present with valid reverse-DNS UUID and action", "passed": true, "evidence": "UUID: com.dbroesch.githubprs"},
+        {"text": "Auth uses PKCE flow OR PAT stored securely in global settings", "passed": true, "evidence": "Standard OAuth auth code flow with local HTTP server on ephemeral port; no client secret"},
+        {"text": "Token stored in streamDeck.settings.setGlobalSettings (NOT action settings)", "passed": true, "evidence": "ActionSettings interface has comment: tokens live in global settings only"},
+        {"text": "GitHub API called with Authorization header", "passed": true, "evidence": "Authorization: Bearer token header present"},
+        {"text": "Button title updated with PR count using setTitle()", "passed": false, "evidence": "PR count rendered in SVG via setImage(), not setTitle(). Technically correct but fails literal assertion."},
+        {"text": "streamDeck.system.openUrl() used to open browser to GitHub", "passed": true, "evidence": "streamDeck.system.openUrl('https://github.com/pulls')"},
+        {"text": "Property inspector HTML file exists", "passed": true, "evidence": "ui/openprlist-pi.html present"},
+        {"text": "plugin.ts registers action and calls streamDeck.connect()", "passed": true, "evidence": "Both present"},
+        {"text": "rollup.config.mjs and package.json present", "passed": true, "evidence": "Both present"}
+      ],
+      "notes": ["Used SVG setImage for PR count — better UX but fails literal setTitle assertion. False negative."]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "github-pr-button",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.778,
+        "passed": 7,
+        "failed": 2,
+        "total": 9,
+        "time_seconds": 207.7,
+        "tokens": 42094,
+        "tool_calls": 37,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "manifest.json present with valid reverse-DNS UUID and action", "passed": true, "evidence": "UUID present"},
+        {"text": "Auth uses PKCE flow OR PAT stored securely in global settings", "passed": false, "evidence": "Uses Authorization Code flow with client_secret — not PKCE, not PAT"},
+        {"text": "Token stored in streamDeck.settings.setGlobalSettings (NOT action settings)", "passed": false, "evidence": "accessToken in global settings BUT client_secret saved to per-action setSettings()"},
+        {"text": "GitHub API called with Authorization header", "passed": true, "evidence": "Authorization header present"},
+        {"text": "Button title updated with PR count using setTitle()", "passed": true, "evidence": "setTitle() called with PR count"},
+        {"text": "streamDeck.system.openUrl() used to open browser to GitHub", "passed": true, "evidence": "openUrl present"},
+        {"text": "Property inspector HTML file exists", "passed": true, "evidence": "PI HTML file present"},
+        {"text": "plugin.ts registers action and calls streamDeck.connect()", "passed": true, "evidence": "Both present"},
+        {"text": "rollup.config.mjs and package.json present", "passed": true, "evidence": "Both present"}
+      ],
+      "notes": ["Security issue: client_secret stored in action settings (plain text, exported with profiles)", "Used fixed port 57321 instead of dynamic port — non-compliant for providers requiring exact URI match"]
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {"mean": 0.963, "stddev": 0.064, "min": 0.889, "max": 1.0},
+      "time_seconds": {"mean": 202.0, "stddev": 45.4, "min": 150.4, "max": 237.9},
+      "tokens": {"mean": 40347, "stddev": 3214, "min": 36861, "max": 43103}
+    },
+    "without_skill": {
+      "pass_rate": {"mean": 0.926, "stddev": 0.129, "min": 0.778, "max": 1.0},
+      "time_seconds": {"mean": 261.2, "stddev": 40.6, "min": 207.7, "max": 301.1},
+      "tokens": {"mean": 44767, "stddev": 2569, "min": 42094, "max": 47122}
+    },
+    "delta": {
+      "pass_rate": "+0.037",
+      "time_seconds": "-59.2",
+      "tokens": "-4420"
+    }
+  },
+  "notes": [
+    "OBS and system-stats assertions are non-discriminating — both configs scored 100%. Future evals should test what the skill uniquely teaches: dynamic OAuth port vs fixed port, no client_secret in action settings, event-driven vs polling architecture choice.",
+    "GitHub is the only discriminating eval: with_skill avoided client_secret in action settings; without_skill stored it there (security vulnerability).",
+    "with_skill ran 59 seconds faster on average and used 4,420 fewer tokens — reference files gave the agent a direct path.",
+    "with_skill GitHub 'failure' on assertion 5 (setTitle) is a false negative — agent used setImage with dynamic SVG per skill guidance on dynamic images. Assertion should be broadened to accept either approach.",
+    "Key skill gap identified: no guidance on which OAuth providers support PKCE vs require client_secret. GitHub does not support PKCE — skill should recommend PAT for GitHub integrations."
+  ]
+}

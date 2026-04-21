@@ -1,0 +1,16 @@
+{
+  "eval_id": 3,
+  "eval_name": "github-pr-button",
+  "prompt": "I want a Stream Deck plugin that connects to the GitHub API. When I press a button it should show how many open PRs I have assigned to me, and pressing it opens the GitHub PR page in my browser. I need to authenticate with GitHub using OAuth. I'm on a Stream Deck MK.2. Build it.",
+  "assertions": [
+    "manifest.json present with valid reverse-DNS UUID and action",
+    "Auth uses either PKCE flow OR personal access token stored securely in global settings",
+    "Token stored in streamDeck.settings.setGlobalSettings (NOT action settings)",
+    "GitHub API called with Authorization header",
+    "Button title updated with PR count using setTitle()",
+    "streamDeck.system.openUrl() used to open browser to GitHub",
+    "Property inspector HTML file exists",
+    "plugin.ts registers action and calls streamDeck.connect()",
+    "rollup.config.mjs and package.json present"
+  ]
+}

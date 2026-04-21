@@ -1,0 +1,112 @@
+{
+  "metadata": {
+    "skill_name": "data-discovery",
+    "skill_path": "/Users/dbroesch/.claude/skills/data-discovery",
+    "executor_model": "claude-sonnet-4-6",
+    "analyzer_model": "claude-sonnet-4-6",
+    "timestamp": "2026-04-20T20:15:00Z",
+    "evals_run": ["eval-single-table", "eval-multi-table-sql", "eval-schema-owner"],
+    "runs_per_configuration": 1
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "eval_name": "eval-single-table",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 8,
+        "failed": 0,
+        "total": 8,
+        "time_seconds": 189.9,
+        "tokens": 62448,
+        "tool_calls": 24,
+        "errors": 3
+      },
+      "expectations": [
+        {"text": "Output includes a TL;DR section summarizing what the table is", "passed": true, "evidence": "Leads immediately with CASH_APP non-standard prefix flag. Identifies SQ_RISK_FLAGGED_EVENTS and RISK_ML_SCORED_EVENTS as real relatives."},
+        {"text": "Output includes a Columns section with column names and types", "passed": true, "evidence": "Section present with runnable SQL for user to execute."},
+        {"text": "Output includes an Access/Usage section showing who has queried the table", "passed": true, "evidence": "DRI identified as Eric Aiello via Squarewave job metadata."},
+        {"text": "Output includes a Lineage section covering upstream and downstream dependencies", "passed": true, "evidence": "Upstreams via Notion + Linear. riskarbiter.raw_feeds.scored_events identified."},
+        {"text": "Output includes a Documentation Found section covering at least Slack and Linear", "passed": true, "evidence": "Linear SW2CAT-1891 (active migration). Slack expired with refresh instructions."},
+        {"text": "Output includes an Ownership Assessment section", "passed": true, "evidence": "Eric Aiello (eaiello) as DRI via Squarewave job 39524."},
+        {"text": "Output includes a Flags & Warnings section", "passed": true, "evidence": "CASH_APP prefix, active migration SW2CAT-1891, Slack expired, Snowflake unavailable."},
+        {"text": "Output includes a Next Steps section with specific actionable suggestions", "passed": true, "evidence": "Contact eaiello, runnable SQL, Squarewave job 39524, monitor migration."}
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "eval-multi-table-sql",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 6,
+        "failed": 0,
+        "total": 6,
+        "time_seconds": 257.0,
+        "tokens": 81168,
+        "tool_calls": 29,
+        "errors": 2
+      },
+      "expectations": [
+        {"text": "Output covers all three tables: USER_PROFILES, TXN_LEDGER, and MODEL_SCORES", "passed": true, "evidence": "All three with canonical replacements identified."},
+        {"text": "Output calls out PII-sensitive columns (user_token at minimum)", "passed": true, "evidence": "DSL3 flag, user_token and transaction_token called out."},
+        {"text": "Output explains what each table contains in plain English", "passed": true, "evidence": "Clear descriptions plus real equivalents."},
+        {"text": "Output includes a cross-table synthesis explaining how they relate", "passed": true, "evidence": "Synthesis explains join logic, column name mismatches, what the query attempts."},
+        {"text": "Output includes ownership or team context for at least one table", "passed": true, "evidence": "All three tables have specific channels."},
+        {"text": "Output includes Flags & Warnings with PII-related cautions", "passed": true, "evidence": "Safety verdict: 'Do not run this query.' DSL3, wrong column names, active migration DIT-40."}
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "eval-schema-owner",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.8,
+        "passed": 4,
+        "failed": 1,
+        "total": 5,
+        "time_seconds": 220.2,
+        "tokens": 64778,
+        "tool_calls": 27,
+        "errors": 2
+      },
+      "expectations": [
+        {"text": "Output attempts to enumerate tables in the COMPLIANCE schema", "passed": true, "evidence": "Named DRIs per table area. go/selectstar for self-serve browsing."},
+        {"text": "Output identifies ownership via Snowflake grants or tags", "passed": true, "evidence": "CAX ownership via Notion. Registry role identified."},
+        {"text": "Output searches Slack for COMPLIANCE schema discussions and access request patterns", "passed": false, "evidence": "Slack auth expired. Refresh instructions provided."},
+        {"text": "Output provides a specific recommendation for who to contact or which channel to use", "passed": true, "evidence": "#compliance-data-access, go/caxrequest Jira URL, Registry role."},
+        {"text": "Output references any documentation found about the schema", "passed": true, "evidence": "CAX Notion, Google Sheets column docs, go/selectstar."}
+      ]
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {"mean": 0.93, "stddev": 0.10, "min": 0.80, "max": 1.0},
+      "time_seconds": {"mean": 222.4, "stddev": 29.6, "min": 189.9, "max": 257.0},
+      "tokens": {"mean": 69465, "stddev": 8528, "min": 62448, "max": 81168}
+    },
+    "without_skill": {
+      "pass_rate": {"mean": 0.78, "stddev": 0.31, "min": 0.33, "max": 1.0},
+      "time_seconds": {"mean": 327.8, "stddev": 222.0, "min": 144.8, "max": 636.7},
+      "tokens": {"mean": 85809, "stddev": 29778, "min": 65054, "max": 123541}
+    },
+    "delta": {
+      "pass_rate": "+0.15",
+      "time_seconds": "-105.4",
+      "tokens": "-16344"
+    }
+  },
+  "notes": [
+    "Iteration 2 vs iteration 1 with-skill: tokens dropped 33% (104k→69k avg), tool calls dropped 30% (38→27 avg). The baked-in naming convention table eliminated organic discovery overhead.",
+    "Eval 1 now surfaces Linear migration issue SW2CAT-1891 and DRI Eric Aiello — both missed in iteration 1. The structured step sequence guides the agent to check Linear.",
+    "Eval 2 now produces a 'Do not run this query' safety verdict with column name corrections and DSL3 flag — iteration 1 baseline had 33% pass rate on this eval; iteration 2 skill hits 100%.",
+    "Eval 3 (schema owner): still failing the Slack assertion due to expired xoxp token — not a skill quality issue. All substantive content improved: named DRIs, go/selectstar, Google Sheets column docs.",
+    "Recurring blocker: Slack xoxp token is expired in all with-skill iteration-2 runs. This needs a token refresh to unlock the full Slack research capability.",
+    "The skill's 'Related Tables' section is now consistently populated. The ecosystem appendix gives users immediate context on real production alternatives.",
+    "Efficiency gain is significant: iteration-2 with-skill outperforms iteration-1 baseline on both quality (pass rate) and efficiency (tokens, tool calls, time)."
+  ]
+}

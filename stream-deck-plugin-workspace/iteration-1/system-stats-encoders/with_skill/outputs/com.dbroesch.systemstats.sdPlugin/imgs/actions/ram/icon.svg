@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
+  <rect width="40" height="40" rx="6" fill="#1a1a2e"/>
+  <!-- RAM stick outline -->
+  <rect x="5" y="13" width="30" height="14" rx="2" fill="none" stroke="#ce93d8" stroke-width="2"/>
+  <!-- Memory chips -->
+  <rect x="8"  y="16" width="5" height="8" rx="1" fill="#ce93d8" opacity="0.7"/>
+  <rect x="15" y="16" width="5" height="8" rx="1" fill="#ce93d8" opacity="0.7"/>
+  <rect x="22" y="16" width="5" height="8" rx="1" fill="#ce93d8" opacity="0.7"/>
+  <!-- Notch at bottom -->
+  <rect x="18" y="27" width="4" height="3" rx="1" fill="#1a1a2e"/>
+  <rect x="18" y="27" width="4" height="1" fill="#ce93d8" opacity="0.4"/>
+</svg>

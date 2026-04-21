@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
+  <!-- Up arrow -->
+  <polygon points="20,4 14,14 17,14 17,20 23,20 23,14 26,14" fill="#f5a623"/>
+  <!-- Down arrow -->
+  <polygon points="20,36 14,26 17,26 17,20 23,20 23,26 26,26" fill="#f5a623" opacity="0.6"/>
+  <!-- Horizontal lines suggesting network activity -->
+  <line x1="4" y1="12" x2="10" y2="12" stroke="#f5a623" stroke-width="1.5" opacity="0.5"/>
+  <line x1="4" y1="20" x2="10" y2="20" stroke="#f5a623" stroke-width="1.5" opacity="0.5"/>
+  <line x1="4" y1="28" x2="10" y2="28" stroke="#f5a623" stroke-width="1.5" opacity="0.5"/>
+  <line x1="30" y1="12" x2="36" y2="12" stroke="#f5a623" stroke-width="1.5" opacity="0.5"/>
+  <line x1="30" y1="20" x2="36" y2="20" stroke="#f5a623" stroke-width="1.5" opacity="0.5"/>
+  <line x1="30" y1="28" x2="36" y2="28" stroke="#f5a623" stroke-width="1.5" opacity="0.5"/>
+</svg>

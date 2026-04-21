@@ -1,0 +1,55 @@
+{
+  "expectations": [
+    {
+      "text": "Output includes a TL;DR section summarizing what the table is",
+      "passed": true,
+      "evidence": "TL;DR section present. Covers same ground as with-skill version: Risk Arbiter output hypothesis, schema naming anomaly, pointer to APP_CASH.APP.RISK_ML_SCORED_EVENTS."
+    },
+    {
+      "text": "Output includes a Columns section with column names and types",
+      "passed": true,
+      "evidence": "Columns section present, notes Snowflake unavailable, includes SQL snippet to retrieve. Structure preserved."
+    },
+    {
+      "text": "Output includes an Access/Usage section showing who has queried the table",
+      "passed": true,
+      "evidence": "Usage section present with inferred context. Notes Snowflake unavailable."
+    },
+    {
+      "text": "Output includes a Lineage section covering upstream and downstream dependencies",
+      "passed": true,
+      "evidence": "Lineage section lists probable upstreams including RISK_ML_SCORED_EVENTS, BANKLIN.TRANSACTION_EVENTS, riskarbiter.raw_feeds.scored_events, and mentions Squarewave ETL context."
+    },
+    {
+      "text": "Output includes a Documentation Found section covering at least Slack and Linear",
+      "passed": true,
+      "evidence": "Documentation Found covers Notion (7 pages), Confluence (unavailable), Linear (searched, no hits), Slack (zero exact matches, sibling tables found), GitHub (zero results)."
+    },
+    {
+      "text": "Output includes an Ownership Assessment section",
+      "passed": true,
+      "evidence": "Ownership Assessment present. Names Banking ML as primary, Trust & Risk BIE as secondary. Lists #cash-ml-banking-help. Also mentions app_risk robot user and Squarewave job #45782."
+    },
+    {
+      "text": "Output includes a Flags & Warnings section",
+      "passed": true,
+      "evidence": "6 flags listed: zero Slack history, schema naming anomaly, table may not exist, no dbt model, potential PII, possible deprecated lineage."
+    },
+    {
+      "text": "Output includes a Next Steps section with specific actionable suggestions",
+      "passed": true,
+      "evidence": "5 Next Steps including: verify table exists (SQL), find ETL via query_history (SQL), post in #cash-ml-banking-help (with message draft), check Squarewave jobs, check registry.sqprod.co."
+    }
+  ],
+  "summary": {
+    "passed": 8,
+    "failed": 0,
+    "total": 8,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "total_tool_calls": 103,
+    "errors_encountered": 2,
+    "output_chars": 8100
+  }
+}

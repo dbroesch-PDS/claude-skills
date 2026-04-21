@@ -46,16 +46,42 @@ try {
 } catch { /* not all SDK versions support this signature */ }
 ```
 
-## Using an image as a button background
+## Using a local SVG as a button logo
 
-Fetch a remote image (e.g. album art) and use it as the button background:
+Load a local SVG and cache it as a PNG buffer. **Always use `.png().toBuffer()` — never `.raw().toBuffer()`.**
+A raw buffer has no format header, so passing it back into `sharp()` later will throw
+"Input buffer contains unsupported image format".
+
+```javascript
+let logoBuffer = null;
+async function getLogo(size) {
+  if (!logoBuffer) {
+    logoBuffer = await sharp(path.join(__dirname, 'assets/logo.svg'))
+      .resize(size, size)
+      .png()
+      .toBuffer();
+  }
+  return logoBuffer;
+}
+
+// Use in renderButton: pass as bgImage
+const logo = await getLogo(deck.ICON_SIZE);
+const buf = await renderButton({ bgImage: logo, bgColor: '#1a1a1a', size: deck.ICON_SIZE });
+```
+
+## Using a remote image as a button background
+
+Fetch a remote image (e.g. album art) and normalize it to PNG with sharp before caching.
+Remote images may be WebP or other formats — normalizing ensures `sharp()` can always decode
+the buffer when rendering.
 
 ```javascript
 async function fetchImageBuffer(url) {
   try {
     const res = await fetch(url);
     if (!res.ok) return null;
-    return Buffer.from(await res.arrayBuffer());
+    const raw = Buffer.from(await res.arrayBuffer());
+    return await sharp(raw).png().toBuffer(); // normalize to PNG
   } catch { return null; }
 }
 
@@ -70,6 +96,39 @@ if (artUrl !== lastArtUrl) {
 }
 
 // Use in renderButton: pass lastArtBuffer as bgImage
+```
+
+## Handling image decode failures in renderButton
+
+When `bgImage` is passed, wrap the sharp pipeline in try/catch and fall back to the color
+background if decoding fails (e.g. empty buffer, corrupted data):
+
+```javascript
+async function renderButton({ icon = '', label = '', bgColor = '#1a1a1a', bgImage = null, size = 120 }) {
+  const svgBg = (color) => `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+    <rect width="${size}" height="${size}" rx="8" fill="${color}"/>
+  </svg>`;
+
+  const useBgImage = !!bgImage;
+  const base = bgImage ? sharp(bgImage).resize(size, size) : sharp(Buffer.from(svgBg(bgColor))).resize(size, size);
+
+  const overlay = `<svg ...>${/* icon + label */}</svg>`;
+
+  try {
+    return await base
+      .composite([{ input: Buffer.from(overlay), blend: 'over' }])
+      .removeAlpha()
+      .raw()
+      .toBuffer();
+  } catch {
+    return await sharp(Buffer.from(svgBg(bgColor)))
+      .resize(size, size)
+      .composite([{ input: Buffer.from(overlay), blend: 'over' }])
+      .removeAlpha()
+      .raw()
+      .toBuffer();
+  }
+}
 ```
 
 ## Compositing multiple SVG layers

@@ -1,0 +1,46 @@
+{
+  "eval": "system-volume-encoder",
+  "variant": "without_skill",
+  "expectations": [
+    {
+      "text": "package.json includes @elgato-stream-deck/node as a dependency",
+      "passed": true,
+      "evidence": "\"@elgato-stream-deck/node\": \"^7.6.2\" present in dependencies"
+    },
+    {
+      "text": "package.json includes sharp as a dependency",
+      "passed": true,
+      "evidence": "\"sharp\": \"^0.34.5\" present in dependencies"
+    },
+    {
+      "text": "deck.on('rotate') handler is present for encoder rotation",
+      "passed": true,
+      "evidence": "deck.on('rotate', async (control, ticks) => { ... }) at line 140"
+    },
+    {
+      "text": "osascript is used to get or set system volume",
+      "passed": true,
+      "evidence": "getVolume() calls execFileSync('osascript', ['-e', 'output volume of (get volume settings)']); setVolume() calls execFileSync with 'set volume output volume'"
+    },
+    {
+      "text": "Rotation is debounced or throttled to avoid flooding osascript calls",
+      "passed": true,
+      "evidence": "clearTimeout(volumeTimer); volumeTimer = setTimeout(async () => { setVolume(pendingVolume) ... }, 100) — 100ms debounce at line 154"
+    },
+    {
+      "text": "Encoder press (deck.on 'down' with encoder type) toggles mute",
+      "passed": true,
+      "evidence": "deck.on('down', async (control) => { if (control.type !== 'encoder') return; ... setMuted(currentMuted) }) at line 174"
+    },
+    {
+      "text": "fillLcd or equivalent is called to update the LCD strip",
+      "passed": true,
+      "evidence": "deck.fillLcd(0, lcdBuf, { format: 'rgb', width: 800, height: 100 }) called in render() at line 124"
+    },
+    {
+      "text": "Volume percentage is shown on the LCD display",
+      "passed": true,
+      "evidence": "renderLcd() SVG includes labelText = muted ? 'MUTED' : '${volume}%' rendered as a bold text element at x=w/2"
+    }
+  ]
+}

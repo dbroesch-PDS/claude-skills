@@ -1,0 +1,61 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+  "UUID": "com.dbroesch.systemstats",
+  "Name": "System Stats",
+  "Version": "1.0.0",
+  "SDKVersion": 2,
+  "Author": "David Broesch",
+  "Description": "Displays CPU usage, RAM usage, and network activity on Stream Deck Plus encoder dials.",
+  "Icon": "imgs/plugin/icon",
+  "CodePath": "bin/plugin.js",
+  "Software": { "MinimumVersion": "6.5" },
+  "OS": [{ "Platform": "mac", "MinimumVersion": "10.15" }],
+  "Nodejs": { "Version": "20", "Debug": "enabled" },
+  "Actions": [
+    {
+      "UUID": "com.dbroesch.systemstats.cpu",
+      "Name": "CPU Usage",
+      "Tooltip": "Displays current CPU usage. Press to refresh all stats.",
+      "Icon": "imgs/actions/cpu/icon",
+      "States": [{ "Image": "imgs/actions/cpu/key" }],
+      "Controllers": ["Encoder"],
+      "Encoder": {
+        "layout": "$A1",
+        "TriggerDescription": {
+          "Rotate": "No action (read-only)",
+          "Push": "Refresh all stats"
+        }
+      }
+    },
+    {
+      "UUID": "com.dbroesch.systemstats.ram",
+      "Name": "RAM Usage",
+      "Tooltip": "Displays current RAM usage. Press to refresh all stats.",
+      "Icon": "imgs/actions/ram/icon",
+      "States": [{ "Image": "imgs/actions/ram/key" }],
+      "Controllers": ["Encoder"],
+      "Encoder": {
+        "layout": "$A1",
+        "TriggerDescription": {
+          "Rotate": "No action (read-only)",
+          "Push": "Refresh all stats"
+        }
+      }
+    },
+    {
+      "UUID": "com.dbroesch.systemstats.network",
+      "Name": "Network Activity",
+      "Tooltip": "Displays current network throughput. Press to refresh all stats.",
+      "Icon": "imgs/actions/network/icon",
+      "States": [{ "Image": "imgs/actions/network/key" }],
+      "Controllers": ["Encoder"],
+      "Encoder": {
+        "layout": "$A1",
+        "TriggerDescription": {
+          "Rotate": "No action (read-only)",
+          "Push": "Refresh all stats"
+        }
+      }
+    }
+  ]
+}

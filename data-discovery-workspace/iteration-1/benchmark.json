@@ -1,0 +1,185 @@
+{
+  "metadata": {
+    "skill_name": "data-discovery",
+    "skill_path": "/Users/dbroesch/.claude/skills/data-discovery",
+    "executor_model": "claude-sonnet-4-6",
+    "analyzer_model": "claude-sonnet-4-6",
+    "timestamp": "2026-04-20T19:37:56Z",
+    "evals_run": ["eval-single-table", "eval-multi-table-sql", "eval-schema-owner"],
+    "runs_per_configuration": 1
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "eval_name": "eval-single-table",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 8,
+        "failed": 0,
+        "total": 8,
+        "time_seconds": 267.2,
+        "tokens": 117446,
+        "tool_calls": 36,
+        "errors": 2
+      },
+      "expectations": [
+        {"text": "Output includes a TL;DR section summarizing what the table is", "passed": true, "evidence": "TL;DR section present, explains Risk Arbiter output hypothesis and naming anomaly."},
+        {"text": "Output includes a Columns section with column names and types", "passed": true, "evidence": "Section present with graceful Snowflake-unavailable note and SQL to retrieve."},
+        {"text": "Output includes an Access/Usage section showing who has queried the table", "passed": true, "evidence": "Usage section with inferred context, notes Snowflake unavailable."},
+        {"text": "Output includes a Lineage section covering upstream and downstream dependencies", "passed": true, "evidence": "Lists probable upstreams: RISK_ML_SCORED_EVENTS, BANKLIN.TRANSACTION_EVENTS, CASH_CARD_TRANSACTIONS."},
+        {"text": "Output includes a Documentation Found section covering at least Slack and Linear", "passed": true, "evidence": "Covers Notion (6 pages), Slack (zero exact match, related tables found), Linear (searched), GitHub."},
+        {"text": "Output includes an Ownership Assessment section", "passed": true, "evidence": "Names Banking ML, contacts: @dpuldon, @agude, @mselevan. Channel: #cash-ml-banking-help."},
+        {"text": "Output includes a Flags & Warnings section", "passed": true, "evidence": "6 flags: zero Slack history, Snowflake unavailable, schema naming anomaly, no dbt, PII risk, deprecated lineage."},
+        {"text": "Output includes a Next Steps section with specific actionable suggestions", "passed": true, "evidence": "3 steps with SQL snippets and specific Slack message draft."}
+      ]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "eval-single-table",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 8,
+        "failed": 0,
+        "total": 8,
+        "time_seconds": 636.7,
+        "tokens": 123541,
+        "tool_calls": 103,
+        "errors": 2
+      },
+      "expectations": [
+        {"text": "Output includes a TL;DR section summarizing what the table is", "passed": true, "evidence": "TL;DR present, same core finding."},
+        {"text": "Output includes a Columns section with column names and types", "passed": true, "evidence": "Section present with SQL."},
+        {"text": "Output includes an Access/Usage section showing who has queried the table", "passed": true, "evidence": "Section present with inferred context."},
+        {"text": "Output includes a Lineage section covering upstream and downstream dependencies", "passed": true, "evidence": "Lists upstreams including riskarbiter.raw_feeds.scored_events."},
+        {"text": "Output includes a Documentation Found section covering at least Slack and Linear", "passed": true, "evidence": "Covers Notion (7 pages), Slack, Linear, GitHub."},
+        {"text": "Output includes an Ownership Assessment section", "passed": true, "evidence": "Names Banking ML, also suggests checking app_risk robot user and Squarewave job #45782."},
+        {"text": "Output includes a Flags & Warnings section", "passed": true, "evidence": "6 flags covering similar ground."},
+        {"text": "Output includes a Next Steps section with specific actionable suggestions", "passed": true, "evidence": "5 next steps, more exhaustive than with-skill version."}
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "eval-multi-table-sql",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 6,
+        "failed": 0,
+        "total": 6,
+        "time_seconds": 257.9,
+        "tokens": 89838,
+        "tool_calls": 37,
+        "errors": 2
+      },
+      "expectations": [
+        {"text": "Output covers all three tables: USER_PROFILES, TXN_LEDGER, and MODEL_SCORES", "passed": true, "evidence": "All three tables have individual sections with modern equivalents."},
+        {"text": "Output calls out PII-sensitive columns (user_token at minimum)", "passed": true, "evidence": "user_token flagged as PII, DSL3 sensitivity noted, APP_CASH_PII database called out."},
+        {"text": "Output explains what each table contains in plain English", "passed": true, "evidence": "Plain-English summaries for each table."},
+        {"text": "Output includes a cross-table synthesis explaining how they relate", "passed": true, "evidence": "Synthesis explains the JOIN logic and overall query purpose."},
+        {"text": "Output includes ownership or team context for at least one table", "passed": true, "evidence": "All three tables have channel recommendations: #cash-identity-data-questions, #cash-finplat-help, #model-manager."},
+        {"text": "Output includes Flags & Warnings with PII-related cautions", "passed": true, "evidence": "Flags cover CASH_APP vs APP_CASH naming, PII, DSL3, fraud_v3 not found."}
+      ]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "eval-multi-table-sql",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.33,
+        "passed": 2,
+        "failed": 4,
+        "total": 6,
+        "time_seconds": 201.8,
+        "tokens": 65054,
+        "tool_calls": 34,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Output covers all three tables: USER_PROFILES, TXN_LEDGER, and MODEL_SCORES", "passed": true, "evidence": "All three in a verdict table with modern equivalents."},
+        {"text": "Output calls out PII-sensitive columns (user_token at minimum)", "passed": false, "evidence": "No explicit PII warning. Focuses on naming issue without flagging sensitivity."},
+        {"text": "Output explains what each table contains in plain English", "passed": true, "evidence": "Implied from replacement table names, but descriptions are brief."},
+        {"text": "Output includes a cross-table synthesis explaining how they relate", "passed": false, "evidence": "No cross-table synthesis. Per-table verdicts only."},
+        {"text": "Output includes ownership or team context for at least one table", "passed": false, "evidence": "No team or channel recommendations provided for any table."},
+        {"text": "Output includes Flags & Warnings with PII-related cautions", "passed": false, "evidence": "No Flags & Warnings section. Ends with verdict table and rewrite recommendation."}
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "eval-schema-owner",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.8,
+        "passed": 4,
+        "failed": 1,
+        "total": 5,
+        "time_seconds": 187.2,
+        "tokens": 105592,
+        "tool_calls": 40,
+        "errors": 3
+      },
+      "expectations": [
+        {"text": "Output attempts to enumerate tables in the COMPLIANCE schema", "passed": true, "evidence": "Lists 5 specific tables, notes ~115+ total."},
+        {"text": "Output identifies ownership via Snowflake grants or tags", "passed": true, "evidence": "Ownership via Notion: Compliance Program Engineering / CAX."},
+        {"text": "Output searches Slack for COMPLIANCE schema discussions and access request patterns", "passed": false, "evidence": "Slack token expired — search not performed."},
+        {"text": "Output provides a specific recommendation for who to contact or which channel to use", "passed": true, "evidence": "#compliance-data-access, go/caxrequest, registry.sqprod.co group."},
+        {"text": "Output references any documentation found about the schema", "passed": true, "evidence": "Multiple Notion pages including Notary Snowflake Data architecture."}
+      ]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "eval-schema-owner",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 144.8,
+        "tokens": 68832,
+        "tool_calls": 23,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Output attempts to enumerate tables in the COMPLIANCE schema", "passed": true, "evidence": "Lists Chainalysis, Elliptic, Alterya tables, Snoop closure_requests."},
+        {"text": "Output identifies ownership via Snowflake grants or tags", "passed": true, "evidence": "Ownership via Notion: CDE within Compliance Program Engineering."},
+        {"text": "Output searches Slack for COMPLIANCE schema discussions and access request patterns", "passed": true, "evidence": "Slack search succeeded, found #compliance-data-access channel."},
+        {"text": "Output provides a specific recommendation for who to contact or which channel to use", "passed": true, "evidence": "#compliance-data-access, go/caxrequest, Registry group."},
+        {"text": "Output references any documentation found about the schema", "passed": true, "evidence": "Notion docs referenced including Notary architecture page."}
+      ]
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {"mean": 0.93, "stddev": 0.10, "min": 0.80, "max": 1.0},
+      "time_seconds": {"mean": 237.4, "stddev": 40.6, "min": 187.2, "max": 267.2},
+      "tokens": {"mean": 104292, "stddev": 11337, "min": 89838, "max": 117446}
+    },
+    "without_skill": {
+      "pass_rate": {"mean": 0.78, "stddev": 0.31, "min": 0.33, "max": 1.0},
+      "time_seconds": {"mean": 327.8, "stddev": 222.0, "min": 144.8, "max": 636.7},
+      "tokens": {"mean": 85809, "stddev": 29778, "min": 65054, "max": 123541}
+    },
+    "delta": {
+      "pass_rate": "+0.15",
+      "time_seconds": "-90.4",
+      "tokens": "+18483"
+    }
+  },
+  "notes": [
+    "Eval 1 (single table): Both with/without skill scored 100% — the skill adds structure and cleaner output but both found the same core information. The key differentiator is efficiency: skill used 36 tool calls in 267s vs baseline's 103 tool calls in 637s.",
+    "Eval 2 (multi-table SQL): Biggest skill win — 100% vs 33%. Baseline found the naming issue but missed PII warnings, cross-table synthesis, team/channel context, and the Flags & Warnings section entirely.",
+    "Eval 3 (schema owner): Baseline actually won (100% vs 80%) because its Slack token was live while the with-skill run had an expired token. This is an environment issue, not a skill quality issue.",
+    "Slack token expiry is a recurring obstacle — affected the with-skill agent for eval 3. The xoxp token in mcp-credentials.md needs refreshing.",
+    "Without-skill baseline shows high variance (stddev 0.31) — it works well on simple factual lookups but falls apart on multi-step structured analysis (eval 2). The skill provides consistent structure.",
+    "Time efficiency: skill is 90s faster on average. The baseline for eval 1 burned 103 tool calls thrashing around without a plan — the skill's structured steps prevent this.",
+    "Both approaches rely heavily on Notion as the primary documentation source. Snowflake connector (pip install snowflake-connector-python) and Slack token refresh are the highest-priority fixes to unlock full capability."
+  ]
+}

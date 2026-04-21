@@ -1,0 +1,82 @@
+{
+  "expectations": [
+    {
+      "text": "manifest.json present with valid reverse-DNS UUID and action",
+      "passed": true,
+      "evidence": "manifest.json exists at com.dbroesch.githubprs.sdPlugin/manifest.json. UUID is 'com.dbroesch.githubprs' (valid reverse-DNS). Action UUID is 'com.dbroesch.githubprs.openprlist' with Name 'Open PRs', States, Controllers, and PropertyInspectorPath all defined."
+    },
+    {
+      "text": "Auth uses either PKCE flow OR personal access token stored securely in global settings",
+      "passed": true,
+      "evidence": "src/services/auth.ts implements OAuth 2.0 authorization_code flow with PKCE helpers (generateCodeVerifier, generateCodeChallenge using SHA-256). A local HTTP server on an ephemeral port handles the callback. The file explicitly notes GitHub standard OAuth Apps don't support the code_challenge param, so the flow omits it but retains the PKCE infrastructure. Token is stored via setGlobalSettings (see assertion 3)."
+    },
+    {
+      "text": "Token stored in streamDeck.settings.setGlobalSettings (NOT action settings)",
+      "passed": true,
+      "evidence": "In src/services/github.ts, storeTokens() calls streamDeck.settings.setGlobalSettings() to persist accessToken, refreshToken, and expiresAt. storeClientId() and clearAuth() also use setGlobalSettings. There is no call to setSettings() (per-action) for the token anywhere in the codebase. ActionSettings interface comment in open-pr-list.ts explicitly states 'No per-action settings needed — tokens live in global settings'."
+    },
+    {
+      "text": "GitHub API called with Authorization header",
+      "passed": true,
+      "evidence": "In src/services/github.ts, the private request() method adds header 'Authorization: Bearer ${this.accessToken}' plus 'Accept: application/vnd.github+json' and 'X-GitHub-Api-Version: 2022-11-28' to every GitHub API call."
+    },
+    {
+      "text": "Button title updated with PR count using setTitle()",
+      "passed": false,
+      "evidence": "The plugin uses setImage() with a dynamically generated SVG that embeds the PR count as text — it does NOT use setTitle() to display the count. Calls to setTitle('') (empty string) appear in onWillAppear and setAllButtonsState, effectively clearing the title. The PR count is rendered inside the SVG image, not via setTitle()."
+    },
+    {
+      "text": "streamDeck.system.openUrl() used to open browser to GitHub",
+      "passed": true,
+      "evidence": "In src/actions/open-pr-list.ts onKeyDown(), streamDeck.system.openUrl(GITHUB_PR_URL) is called to open 'https://github.com/pulls?...' when the button is pressed. Also used in src/services/auth.ts to open the OAuth authorization URL."
+    },
+    {
+      "text": "Property inspector HTML file exists",
+      "passed": true,
+      "evidence": "File com.dbroesch.githubprs.sdPlugin/ui/openprlist-pi.html exists and is referenced in manifest.json under PropertyInspectorPath. It contains full UI for OAuth setup (client ID input, connect/disconnect buttons, status display) and WebSocket communication with the plugin."
+    },
+    {
+      "text": "plugin.ts registers action and calls streamDeck.connect()",
+      "passed": true,
+      "evidence": "src/plugin.ts calls streamDeck.actions.registerAction(openPRListAction) to register the OpenPRListAction instance, and ends with 'await streamDeck.connect()' as the final statement."
+    },
+    {
+      "text": "rollup.config.mjs and package.json present",
+      "passed": true,
+      "evidence": "Both rollup.config.mjs and package.json are present at the outputs root. rollup.config.mjs bundles src/plugin.ts to com.dbroesch.githubprs.sdPlugin/bin/plugin.js using typescript, nodeResolve, and commonjs plugins. package.json defines build/watch scripts using rollup and lists @elgato/streamdeck as a dependency."
+    }
+  ],
+  "summary": {
+    "passed": 8,
+    "failed": 1,
+    "total": 9,
+    "pass_rate": 0.889
+  },
+  "execution_metrics": {
+    "total_tokens": 41077
+  },
+  "timing": {
+    "executor_duration_seconds": 217.628,
+    "total_duration_seconds": 217.628
+  },
+  "claims": [],
+  "user_notes_summary": {
+    "uncertainties": [
+      "auth.ts generates PKCE helpers (verifier + SHA-256 challenge) but does not pass code_challenge to GitHub because standard OAuth Apps do not support it — the file comments acknowledge this. Depending on how strictly 'PKCE flow' is defined, this may be considered a partial implementation."
+    ],
+    "needs_review": [
+      "Assertion 5 (setTitle for PR count): the plugin renders PR count exclusively via SVG image rather than setTitle(). This is a valid alternative approach but does not satisfy the literal assertion."
+    ],
+    "workarounds": [
+      "PR count display uses dynamically generated SVG data URIs via setImage() instead of setTitle(), which is a more visually rich but non-standard approach relative to the assertion."
+    ]
+  },
+  "eval_feedback": {
+    "suggestions": [
+      "If the assertion 'Button title updated with PR count using setTitle()' is meant to test that the count is visible on the button, consider rewording it to 'PR count is displayed on the button (via setTitle or setImage with embedded text)' — the SVG approach fully satisfies the user intent.",
+      "The PKCE assertion could be clarified: GitHub standard OAuth Apps do not support PKCE parameters, so the plugin falls back to standard auth_code flow with a local callback server. If the intent is 'secure OAuth flow', this passes; if the intent is 'cryptographic PKCE parameters sent to provider', this is a partial pass.",
+      "Consider adding an assertion for the polling mechanism (setInterval every 30s) as it is a meaningful behavioral feature of the plugin."
+    ],
+    "overall": "Strong implementation — 8 of 9 assertions pass. The single failure is assertion 5 (setTitle for PR count), where the plugin uses a more sophisticated SVG-based setImage() approach instead. All security-critical requirements (global settings for token storage, Authorization header, OAuth flow) pass cleanly."
+  }
+}

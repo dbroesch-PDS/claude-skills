@@ -1,0 +1,39 @@
+{
+  "eval_id": 1,
+  "eval_name": "eval-create-issue",
+  "configuration": "without_skill",
+  "expectations": [
+    {
+      "text": "Attempts to call linear_create_issue or explicitly names it as the tool to use",
+      "passed": true,
+      "evidence": "Names linear_create_issue and linear_get_teams as the tools it would use"
+    },
+    {
+      "text": "Includes correct team (Risk Foundation), title, and priority (High) in the action or explanation",
+      "passed": true,
+      "evidence": "All three present in the 'Issue Details' table"
+    },
+    {
+      "text": "Includes a description about quarterly hygiene and 90+ day stale features",
+      "passed": true,
+      "evidence": "Description mentions quarterly hygiene task and 90+ days"
+    },
+    {
+      "text": "Does not ask unnecessary clarifying questions before acting",
+      "passed": true,
+      "evidence": "No questions asked \u2014 goes straight to documenting the issue"
+    },
+    {
+      "text": "Returns or references what an issue ID/URL response would look like",
+      "passed": false,
+      "evidence": "No issue ID or URL shown \u2014 only a table of fields with no mock response"
+    }
+  ],
+  "pass_rate": 0.8,
+  "summary": {
+    "pass_rate": 0.8,
+    "passed": 4,
+    "failed": 1,
+    "total": 5
+  }
+}

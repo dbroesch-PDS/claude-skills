@@ -1,0 +1,27 @@
+{
+  "eval_id": 3,
+  "eval_name": "eval-standup-check",
+  "prompt": "Quick standup check — what issues are currently In Progress on my team? I want to see if anything is blocked or hasn't moved in a while.",
+  "assertions": [
+    {
+      "text": "Attempts linear_list_issues with an In Progress state filter, or explicitly describes doing so",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "Response is structured and readable — not a raw JSON dump",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "Calls out or flags any items that appear blocked or stale",
+      "passed": null,
+      "evidence": null
+    },
+    {
+      "text": "Response is concise enough to be useful in a standup context (not excessively long)",
+      "passed": null,
+      "evidence": null
+    }
+  ]
+}

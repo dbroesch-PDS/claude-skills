@@ -28,6 +28,19 @@ Here you write a script, run `node index.js`, and it owns the hardware directly.
 
 ---
 
+## Keeping the README accurate
+
+When writing or updating a README button layout table, **always read the actual render functions** (`renderMain`, `renderSpotify`, etc.) and the button index constants (`MAIN`, `SPOT`, `MEET`, etc.) directly from the code. Never write the table from memory or assumption.
+
+For each button, capture:
+- The exact icon and label as passed to `renderButton()` — including dynamic values (e.g. `micMuted ? '🔇 MUTED' : '🎤 LIVE'`)
+- Which index it maps to (determines row/col in the table)
+- Any state-dependent behavior (color changes, label changes)
+
+Unrendered button indices should be shown as `—` in the table. Always show all rows, even if Row 1 is all empty.
+
+---
+
 ## Setup
 
 ### package.json
@@ -101,31 +114,37 @@ Buttons need raw RGB pixel buffers. Use `sharp` to render SVG → raw RGB.
 const sharp = require('sharp');
 
 async function renderButton({ icon = '', label = '', bgColor = '#1a1a1a', bgImage = null, size = 120 }) {
-  let base;
+  // bgImage must be a PNG buffer — see references/rendering.md for how to load logos and remote images
+  const svgBg = (color) => `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+    <rect width="${size}" height="${size}" rx="8" fill="${color}"/>
+  </svg>`;
 
-  if (bgImage) {
-    // bgImage = raw Buffer of a JPEG/PNG
-    base = sharp(bgImage).resize(size, size);
-  } else {
-    const bg = `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
-      <rect width="${size}" height="${size}" rx="8" fill="${bgColor}"/>
-    </svg>`;
-    base = sharp(Buffer.from(bg)).resize(size, size);
-  }
+  const useBgImage = !!bgImage;
+  const base = bgImage ? sharp(bgImage).resize(size, size) : sharp(Buffer.from(svgBg(bgColor))).resize(size, size);
 
   const overlay = `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
-    ${bgImage ? `<rect width="${size}" height="${size}" fill="rgba(0,0,0,0.45)"/>` : ''}
+    ${useBgImage ? `<rect width="${size}" height="${size}" fill="rgba(0,0,0,0.45)"/>` : ''}
     <text x="${size/2}" y="${size/2 - (label ? 10 : 0)}" text-anchor="middle"
       dominant-baseline="middle" font-size="${size * 0.33}" font-family="Arial">${esc(icon)}</text>
     ${label ? `<text x="${size/2}" y="${size*0.78}" text-anchor="middle"
       font-size="${size*0.13}" font-family="Arial" font-weight="bold" fill="white">${esc(label)}</text>` : ''}
   </svg>`;
 
-  return base
-    .composite([{ input: Buffer.from(overlay), blend: 'over' }])
-    .removeAlpha()
-    .raw()
-    .toBuffer();
+  try {
+    return await base
+      .composite([{ input: Buffer.from(overlay), blend: 'over' }])
+      .removeAlpha()
+      .raw()
+      .toBuffer();
+  } catch {
+    // Fall back to color background if image decoding fails
+    return await sharp(Buffer.from(svgBg(bgColor)))
+      .resize(size, size)
+      .composite([{ input: Buffer.from(overlay), blend: 'over' }])
+      .removeAlpha()
+      .raw()
+      .toBuffer();
+  }
 }
 
 function esc(s) {

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>OBS Connection</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        font-size: 13px;
+        color: #ccc;
+        background: #2d2d2d;
+        margin: 0;
+        padding: 12px;
+      }
+      label {
+        display: block;
+        margin-bottom: 4px;
+        color: #aaa;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        background: #1a1a1a;
+        border: 1px solid #444;
+        border-radius: 4px;
+        color: #eee;
+        padding: 6px 8px;
+        font-size: 13px;
+        margin-bottom: 12px;
+      }
+      input:focus { outline: none; border-color: #6b8cff; }
+      button {
+        width: 100%;
+        padding: 8px;
+        border-radius: 4px;
+        border: none;
+        font-size: 13px;
+        cursor: pointer;
+        background: #6b8cff;
+        color: #fff;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      button:hover { background: #8aaaf8; }
+      #status {
+        font-size: 11px;
+        text-align: center;
+        color: #888;
+        min-height: 16px;
+      }
+      .connected { color: #4caf50 !important; }
+      .error { color: #e74c3c !important; }
+      .section-title {
+        font-size: 12px;
+        font-weight: 600;
+        color: #eee;
+        margin-bottom: 8px;
+        margin-top: 4px;
+      }
+      hr { border: none; border-top: 1px solid #444; margin: 12px 0; }
+      .hint { font-size: 11px; color: #666; margin-top: -8px; margin-bottom: 12px; }
+    </style>
+  </head>
+  <body>
+    <div class="section-title">OBS WebSocket Connection</div>
+
+    <label>Host</label>
+    <input type="text" id="obsHost" placeholder="localhost" />
+
+    <label>Port</label>
+    <input type="number" id="obsPort" placeholder="4455" min="1" max="65535" />
+
+    <label>Password</label>
+    <input type="password" id="obsPassword" placeholder="(leave blank if none)" />
+
+    <p class="hint">Enable WebSocket in OBS: Tools → obs-websocket Settings</p>
+
+    <button id="saveBtn">Save &amp; Connect</button>
+    <div id="status"></div>
+
+    <script>
+      let websocket = null;
+      let context = null;
+
+      function connectElgatoStreamDeckSocket(inPort, inUUID, inRegisterEvent, inInfo, inActionInfo) {
+        context = JSON.parse(inActionInfo).context;
+        websocket = new WebSocket(`ws://localhost:${inPort}`);
+
+        websocket.onopen = () => {
+          websocket.send(JSON.stringify({ event: inRegisterEvent, uuid: inUUID }));
+          websocket.send(JSON.stringify({ event: "getGlobalSettings", context }));
+        };
+
+        websocket.onmessage = (msg) => {
+          const data = JSON.parse(msg.data);
+          if (data.event === "didReceiveGlobalSettings") {
+            const s = data.payload.settings;
+            if (s.obsHost) document.getElementById("obsHost").value = s.obsHost;
+            if (s.obsPort) document.getElementById("obsPort").value = s.obsPort;
+            // Never pre-fill password for security
+            setStatus(s.obsHost ? `Configured: ${s.obsHost}:${s.obsPort || 4455}` : "Not configured", s.obsHost ? "connected" : "");
+          }
+        };
+      }
+
+      function setStatus(msg, cls = "") {
+        const el = document.getElementById("status");
+        el.textContent = msg;
+        el.className = cls;
+      }
+
+      document.getElementById("saveBtn").addEventListener("click", () => {
+        const host = document.getElementById("obsHost").value.trim() || "localhost";
+        const port = parseInt(document.getElementById("obsPort").value, 10) || 4455;
+        const password = document.getElementById("obsPassword").value;
+
+        websocket.send(JSON.stringify({
+          event: "setGlobalSettings",
+          context,
+          payload: { obsHost: host, obsPort: port, obsPassword: password },
+        }));
+
+        setStatus(`Saved: ${host}:${port}`, "connected");
+      });
+    </script>
+  </body>
+</html>

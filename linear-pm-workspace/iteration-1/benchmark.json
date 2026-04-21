@@ -1,0 +1,313 @@
+{
+  "metadata": {
+    "skill_name": "linear-pm",
+    "skill_path": "<path/to/skill>",
+    "executor_model": "<model-name>",
+    "analyzer_model": "<model-name>",
+    "timestamp": "2026-04-09T16:54:22Z",
+    "evals_run": [
+      1,
+      2,
+      3
+    ],
+    "runs_per_configuration": 3
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 44.4,
+        "tokens": 15639,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Attempts to call linear_create_issue or explicitly names it as the tool to use",
+          "passed": true,
+          "evidence": "Explicitly calls out linear_list_teams + linear_create_issue with full argument breakdown"
+        },
+        {
+          "text": "Includes correct team (Risk Foundation), title, and priority (High) in the action or explanation",
+          "passed": true,
+          "evidence": "All three fields present: team=Risk Foundation, title exact match, priority=2 (High) with mapping explained"
+        },
+        {
+          "text": "Includes a description about quarterly hygiene and 90+ day stale features",
+          "passed": true,
+          "evidence": "Description in tool call includes 'quarterly hygiene' and '90+ days'"
+        },
+        {
+          "text": "Does not ask unnecessary clarifying questions before acting",
+          "passed": true,
+          "evidence": "Goes straight to action \u2014 no questions asked"
+        },
+        {
+          "text": "Returns or references what an issue ID/URL response would look like",
+          "passed": true,
+          "evidence": "Shows RF-142 with full URL https://linear.app/block/issue/RF-142/..."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 51.9,
+        "tokens": 14430,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Outlines or executes a multi-step workflow: list cycles, fetch backlog, surface high-priority items",
+          "passed": true,
+          "evidence": "6-step workflow explicitly documented: list teams \u2192 list cycles \u2192 fetch backlog \u2192 group by priority \u2192 interactive scoping \u2192 summarize"
+        },
+        {
+          "text": "Presents issues grouped or ordered by priority (high first)",
+          "passed": true,
+          "evidence": "18 issues shown in Urgent \u2192 High \u2192 Medium \u2192 Low \u2192 No Priority order"
+        },
+        {
+          "text": "Offers to move items into the next cycle rather than just describing what the user could do themselves",
+          "passed": true,
+          "evidence": "'Want me to pull these into Cycle 14? I can also swap any in/out \u2014 just say the word.'"
+        },
+        {
+          "text": "Does not dump raw API/JSON output without summarizing or interpreting it",
+          "passed": true,
+          "evidence": "Clean tables with narrative flags, recommendation section, velocity estimate"
+        },
+        {
+          "text": "Mentions or asks which team to scope the cycle for",
+          "passed": true,
+          "evidence": "Identifies 'Risk Foundation / Support Product Science' automatically from SKILL.md context"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 3,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 33.3,
+        "tokens": 13365,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Attempts linear_list_issues with an In Progress state filter, or explicitly describes doing so",
+          "passed": true,
+          "evidence": "Documents exact tool calls: linear_list_teams \u2192 linear_list_workflow_states \u2192 linear_list_issues with state filter"
+        },
+        {
+          "text": "Response is structured and readable \u2014 not a raw JSON dump",
+          "passed": true,
+          "evidence": "Table format with columns for Issue, Assignee, Priority, Last Updated, Flag. Followed by narrative summary"
+        },
+        {
+          "text": "Calls out or flags any items that appear blocked or stale",
+          "passed": true,
+          "evidence": "Flags RFS-138 (6 days stale), RFS-131 (9 days, BLOCKED?), RFS-133 (12 days stale) with recommended actions"
+        },
+        {
+          "text": "Response is concise enough to be useful in a standup context",
+          "passed": true,
+          "evidence": "Tight table + short summary + 3 actionable bullets \u2014 appropriate length for standup use"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.8,
+        "passed": 4,
+        "failed": 1,
+        "total": 5,
+        "time_seconds": 24.8,
+        "tokens": 12026,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Attempts to call linear_create_issue or explicitly names it as the tool to use",
+          "passed": true,
+          "evidence": "Names linear_create_issue and linear_get_teams as the tools it would use"
+        },
+        {
+          "text": "Includes correct team (Risk Foundation), title, and priority (High) in the action or explanation",
+          "passed": true,
+          "evidence": "All three present in the 'Issue Details' table"
+        },
+        {
+          "text": "Includes a description about quarterly hygiene and 90+ day stale features",
+          "passed": true,
+          "evidence": "Description mentions quarterly hygiene task and 90+ days"
+        },
+        {
+          "text": "Does not ask unnecessary clarifying questions before acting",
+          "passed": true,
+          "evidence": "No questions asked \u2014 goes straight to documenting the issue"
+        },
+        {
+          "text": "Returns or references what an issue ID/URL response would look like",
+          "passed": false,
+          "evidence": "No issue ID or URL shown \u2014 only a table of fields with no mock response"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.4,
+        "passed": 2,
+        "failed": 3,
+        "total": 5,
+        "time_seconds": 27.0,
+        "tokens": 10839,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Outlines or executes a multi-step workflow: list cycles, fetch backlog, surface high-priority items",
+          "passed": false,
+          "evidence": "Describes what it would do at a high level but does not execute any workflow steps"
+        },
+        {
+          "text": "Presents issues grouped or ordered by priority (high first)",
+          "passed": false,
+          "evidence": "No issues shown at all"
+        },
+        {
+          "text": "Offers to move items into the next cycle rather than just describing what the user could do themselves",
+          "passed": false,
+          "evidence": "Asks 5 clarifying questions and offers to help if user provides data \u2014 no action taken"
+        },
+        {
+          "text": "Does not dump raw API/JSON output without summarizing or interpreting it",
+          "passed": true,
+          "evidence": "No raw output (because no data was fetched)"
+        },
+        {
+          "text": "Mentions or asks which team to scope the cycle for",
+          "passed": true,
+          "evidence": "Asks 'Which Linear team or project are we planning for?'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 3,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.5,
+        "passed": 2,
+        "failed": 2,
+        "total": 4,
+        "time_seconds": 25.4,
+        "tokens": 10424,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Attempts linear_list_issues with an In Progress state filter, or explicitly describes doing so",
+          "passed": false,
+          "evidence": "Says it can't access Linear and lists what it would need \u2014 does not attempt or describe the tool call"
+        },
+        {
+          "text": "Response is structured and readable \u2014 not a raw JSON dump",
+          "passed": true,
+          "evidence": "Clean structured text with headers \u2014 no JSON"
+        },
+        {
+          "text": "Calls out or flags any items that appear blocked or stale",
+          "passed": false,
+          "evidence": "No issues retrieved \u2014 nothing to flag"
+        },
+        {
+          "text": "Response is concise enough to be useful in a standup context",
+          "passed": true,
+          "evidence": "Short response, but provides no actionable data"
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 1.0,
+        "stddev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 43.2,
+        "stddev": 9.3579,
+        "min": 33.3,
+        "max": 51.9
+      },
+      "tokens": {
+        "mean": 14478.0,
+        "stddev": 1137.7596,
+        "min": 13365,
+        "max": 15639
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 0.5667,
+        "stddev": 0.2082,
+        "min": 0.4,
+        "max": 0.8
+      },
+      "time_seconds": {
+        "mean": 25.7333,
+        "stddev": 1.1372,
+        "min": 24.8,
+        "max": 27.0
+      },
+      "tokens": {
+        "mean": 11096.3333,
+        "stddev": 831.4243,
+        "min": 10424,
+        "max": 12026
+      }
+    },
+    "delta": {
+      "pass_rate": "+0.43",
+      "time_seconds": "+17.5",
+      "tokens": "+3382"
+    }
+  },
+  "notes": []
+}

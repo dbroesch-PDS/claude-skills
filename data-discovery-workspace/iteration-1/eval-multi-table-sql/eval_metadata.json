@@ -1,0 +1,13 @@
+{
+  "eval_id": 2,
+  "eval_name": "eval-multi-table-sql",
+  "prompt": "I found this SQL in a legacy notebook and have no idea what these tables are:\n\nSELECT u.user_token, t.amount, t.created_at, r.score\nFROM CASH_APP.IDENTITY.USER_PROFILES u\nJOIN CASH_APP.PAYMENTS.TXN_LEDGER t ON u.user_token = t.user_token\nJOIN CASH_APP.RISK.MODEL_SCORES r ON t.txn_id = r.entity_id\nWHERE r.model_name = 'fraud_v3'\n  AND t.created_at >= '2025-01-01'\n\nCan you tell me what each of these tables is and whether it's safe to use them?",
+  "assertions": [
+    "Output covers all three tables: USER_PROFILES, TXN_LEDGER, and MODEL_SCORES",
+    "Output calls out PII-sensitive columns (user_token at minimum)",
+    "Output explains what each table contains in plain English",
+    "Output includes a cross-table synthesis explaining how they relate",
+    "Output includes ownership or team context for at least one table",
+    "Output includes Flags & Warnings with PII-related cautions"
+  ]
+}

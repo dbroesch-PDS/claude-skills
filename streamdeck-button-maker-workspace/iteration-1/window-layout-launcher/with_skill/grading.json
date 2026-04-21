@@ -1,0 +1,46 @@
+{
+  "eval": "window-layout-launcher",
+  "variant": "with_skill",
+  "expectations": [
+    {
+      "text": "package.json includes @elgato-stream-deck/node as a dependency",
+      "passed": true,
+      "evidence": "\"@elgato-stream-deck/node\": \"^7.6.2\" present in dependencies"
+    },
+    {
+      "text": "package.json includes sharp as a dependency",
+      "passed": true,
+      "evidence": "\"sharp\": \"^0.34.5\" present in dependencies"
+    },
+    {
+      "text": "Three distinct buttons are defined for Focus, Meeting, and Communication layouts",
+      "passed": true,
+      "evidence": "BUTTONS = { FOCUS: 0, MEETING: 1, COMMS: 2 } and BUTTON_DEFS array with three entries for activateFocusMode, activateMeetingMode, activateCommunicationMode"
+    },
+    {
+      "text": "osascript or execSync is used to run AppleScript",
+      "passed": true,
+      "evidence": "runScript() calls execSync('osascript -e ...') and runScriptFile() calls execSync('osascript', { input: scriptText })"
+    },
+    {
+      "text": "AppleScript 'set bounds' or equivalent is used to position/resize windows",
+      "passed": true,
+      "evidence": "'set bounds of front window to {...}' used in all three layout scripts for Chrome, iTerm, and 'set position/size of frontWindow' for Zoom/Obsidian"
+    },
+    {
+      "text": "Apps are activated or opened if not already running",
+      "passed": true,
+      "evidence": "'tell application \"zoom.us\" to activate', 'tell application \"Obsidian\" to activate', 'tell application \"Slack\" to activate' in layout scripts"
+    },
+    {
+      "text": "Each button has a distinct label and icon identifying the layout",
+      "passed": true,
+      "evidence": "BUTTON_DEFS: {icon:'🎯', label:'Focus'}, {icon:'📹', label:'Meeting'}, {icon:'💬', label:'Comms'} — each rendered via renderButton()"
+    },
+    {
+      "text": "No external npm packages beyond @elgato-stream-deck/node and sharp are required",
+      "passed": true,
+      "evidence": "package.json dependencies only contain @elgato-stream-deck/node and sharp; code only uses built-in node:child_process"
+    }
+  ]
+}

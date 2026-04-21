@@ -1,0 +1,46 @@
+{
+  "eval": "window-layout-launcher",
+  "variant": "without_skill",
+  "expectations": [
+    {
+      "text": "package.json includes @elgato-stream-deck/node as a dependency",
+      "passed": true,
+      "evidence": "\"@elgato-stream-deck/node\": \"^7.6.2\" present in dependencies"
+    },
+    {
+      "text": "package.json includes sharp as a dependency",
+      "passed": true,
+      "evidence": "\"sharp\": \"^0.34.5\" present in dependencies"
+    },
+    {
+      "text": "Three distinct buttons are defined for Focus, Meeting, and Communication layouts",
+      "passed": true,
+      "evidence": "BUTTONS array with three entries: index 0 (Focus/activateFocusMode), index 1 (Meeting/activateMeetingMode), index 2 (Comms/activateCommunicationMode)"
+    },
+    {
+      "text": "osascript or execSync is used to run AppleScript",
+      "passed": true,
+      "evidence": "runAppleScript() calls execFileAsync('osascript', ['-e', script]); used throughout all layout functions"
+    },
+    {
+      "text": "AppleScript 'set bounds' or equivalent is used to position/resize windows",
+      "passed": true,
+      "evidence": "'set bounds of front window to {0, 0, half, height}' for Chrome/iTerm in Focus; 'set position of front window' and 'set size of front window' for Zoom in Meeting"
+    },
+    {
+      "text": "Apps are activated or opened if not already running",
+      "passed": true,
+      "evidence": "'tell application \"Slack\" to activate', 'tell application \"Google Chrome\" to activate', 'tell application \"zoom.us\" to activate' in layout scripts"
+    },
+    {
+      "text": "Each button has a distinct label and icon identifying the layout",
+      "passed": true,
+      "evidence": "BUTTONS array: {icon:'🎯', label:'Focus'}, {icon:'📹', label:'Meeting'}, {icon:'💬', label:'Comms'} — each rendered via renderButton()"
+    },
+    {
+      "text": "No external npm packages beyond @elgato-stream-deck/node and sharp are required",
+      "passed": true,
+      "evidence": "package.json dependencies only contain @elgato-stream-deck/node and sharp; code only uses built-in node:child_process and node:util"
+    }
+  ]
+}

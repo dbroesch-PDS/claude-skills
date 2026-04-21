@@ -1,0 +1,16 @@
+{
+  "eval_id": 2,
+  "eval_name": "system-stats-encoders",
+  "prompt": "I have a Stream Deck Plus and want a plugin that shows my computer's CPU usage, RAM usage, and network activity on the first 3 encoder dials. Rotating a dial should do nothing (read-only display), but pressing any dial should refresh all stats immediately. The touch strip should show a bar graph of the current value. Build the full plugin.",
+  "assertions": [
+    "manifest.json has 3 encoder actions with Controllers including Encoder",
+    "Each encoder action has Encoder.layout set (e.g. $A1)",
+    "Each action calls action.setFeedback() with an indicator field",
+    "action.isDial() guard present before setFeedback calls",
+    "Node os module used to read system stats",
+    "onDialDown triggers immediate stat refresh",
+    "Polling interval set up in plugin.ts",
+    "plugin.ts calls await streamDeck.connect()",
+    "package.json and rollup.config.mjs present"
+  ]
+}

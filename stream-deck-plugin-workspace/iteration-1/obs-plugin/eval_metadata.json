@@ -1,0 +1,17 @@
+{
+  "eval_id": 1,
+  "eval_name": "obs-plugin",
+  "prompt": "I want to build a Stream Deck plugin that controls OBS Studio. I need buttons for: start/stop recording, toggle streaming, mute/unmute microphone, and a scene switcher. The scene switcher should show the current scene name on the button. I have a Stream Deck MK.2 (15 keys). OBS has a WebSocket API I can connect to. Build me the full plugin.",
+  "assertions": [
+    "manifest.json exists with UUID in reverse-DNS format",
+    "manifest.json contains all 4 action UUIDs (record, stream, mute, scene)",
+    "manifest.json has CodePath pointing to bin/plugin.js",
+    "plugin.ts exists and calls streamDeck.connect()",
+    "All 4 action TypeScript files exist",
+    "Scene action uses setTitle() to show current scene name",
+    "rollup.config.mjs exists",
+    "package.json includes @elgato/streamdeck dependency",
+    "No PKCE OAuth code included (not needed for OBS WebSocket)",
+    "OBS WebSocket connection logic is present"
+  ]
+}

@@ -1,0 +1,256 @@
+{
+  "metadata": {
+    "skill_name": "streamdeck-button-maker",
+    "skill_path": "/Users/dbroesch/.claude/skills/streamdeck-button-maker",
+    "executor_model": "claude-sonnet-4-6",
+    "analyzer_model": "claude-sonnet-4-6",
+    "timestamp": "2026-04-14T00:00:00Z",
+    "evals_run": [1, 2, 3, 4],
+    "runs_per_configuration": 1
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "eval_name": "google-meet-controller",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 8,
+        "failed": 0,
+        "total": 8,
+        "time_seconds": 63.2,
+        "tokens": 21632,
+        "tool_calls": null,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "package.json includes @elgato-stream-deck/node as a dependency", "passed": true, "evidence": "\"@elgato-stream-deck/node\": \"^7.6.2\" present in dependencies"},
+        {"text": "package.json includes sharp as a dependency", "passed": true, "evidence": "\"sharp\": \"^0.34.5\" present in dependencies"},
+        {"text": "osascript is used to detect Chrome/Meet state", "passed": true, "evidence": "detectMeetCall() calls execSync('osascript -e ...') checking for 'meet.google.com' in Chrome tab URL"},
+        {"text": "Three separate button indices are used for mic, camera, and hang up", "passed": true, "evidence": "BTN_MIC = 0, BTN_CAM = 1, BTN_HANGUP = 2 defined and used throughout"},
+        {"text": "Button rendering uses sharp to produce raw RGB buffers", "passed": true, "evidence": "renderButton() uses sharp(Buffer.from(bg)).resize().composite().removeAlpha().raw().toBuffer()"},
+        {"text": "setInterval polling is present to continuously update button state", "passed": true, "evidence": "setInterval(() => poll(deck), 2000) at line 292"},
+        {"text": "deck.on('down') handler is present for button presses", "passed": true, "evidence": "deck.on('down', async (control) => { ... }) at line 295"},
+        {"text": "Different colors/icons used for active vs inactive (in-call vs not-in-call) states", "passed": true, "evidence": "getButtonConfig() returns opacity:0.35 / bgColor:'#2a2a2a' when not inCall; green '#1a4a1a' / red '#7a1a1a' when inCall"}
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "google-meet-controller",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 8,
+        "failed": 0,
+        "total": 8,
+        "time_seconds": 79.7,
+        "tokens": 23489,
+        "tool_calls": null,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "package.json includes @elgato-stream-deck/node as a dependency", "passed": true, "evidence": "\"@elgato-stream-deck/node\": \"^7.6.2\" present in dependencies"},
+        {"text": "package.json includes sharp as a dependency", "passed": true, "evidence": "\"sharp\": \"^0.34.5\" present in dependencies"},
+        {"text": "osascript is used to detect Chrome/Meet state", "passed": true, "evidence": "detectMeetCall() calls execSync('osascript -e ...') checking all Chrome tabs for 'meet.google.com'"},
+        {"text": "Three separate button indices are used for mic, camera, and hang up", "passed": true, "evidence": "BTN = { MIC: 0, CAMERA: 1, HANGUP: 2 } defined at lines 10-14, each handled separately"},
+        {"text": "Button rendering uses sharp to produce raw RGB buffers", "passed": true, "evidence": "renderButton() uses sharp(Buffer.from(svg)).resize().removeAlpha().raw().toBuffer()"},
+        {"text": "setInterval polling is present to continuously update button state", "passed": true, "evidence": "const pollInterval = setInterval(() => poll(deck), 2000) at line 278"},
+        {"text": "deck.on('down') handler is present for button presses", "passed": true, "evidence": "deck.on('down', async (control) => { ... }) at line 281"},
+        {"text": "Different colors/icons used for active vs inactive (in-call vs not-in-call) states", "passed": true, "evidence": "renderButton() uses dimmed:true (opacity 0.25, grey bg) when not inCall; green '#1a7a1a' / red '#b22222' with different icons when inCall"}
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "pomodoro-timer",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 8,
+        "failed": 0,
+        "total": 8,
+        "time_seconds": 43.0,
+        "tokens": 20067,
+        "tool_calls": null,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "package.json includes @elgato-stream-deck/node as a dependency", "passed": true, "evidence": "\"@elgato-stream-deck/node\": \"^7.6.2\" present in dependencies"},
+        {"text": "package.json includes sharp as a dependency", "passed": true, "evidence": "\"sharp\": \"^0.34.5\" present in dependencies"},
+        {"text": "setInterval or setTimeout used for per-second countdown", "passed": true, "evidence": "tickInterval = setInterval(async () => { ... }, 1000) in startTimer() at line 107"},
+        {"text": "MM:SS format countdown is rendered onto the button", "passed": true, "evidence": "formatTime() returns padded MM:SS string; topText = formatTime(secondsLeft) rendered in SVG text element"},
+        {"text": "Button color changes based on timer state (at least two distinct colors for running/done)", "passed": true, "evidence": "bgColor '#1a3a1a' when running, '#1a1a1a' when paused/idle, '#cc2200' when done"},
+        {"text": "deck.on('down') handler toggles start/pause", "passed": true, "evidence": "deck.on('down', async (control) => { ... await handlePress(deck) }) at line 175; handlePress toggles running on/off"},
+        {"text": "Reset logic is present (either on DONE click or separate mechanism)", "passed": true, "evidence": "handlePress() calls resetTimer() when done===true, which sets secondsLeft=POMODORO_SECONDS, running=false, done=false"},
+        {"text": "No external fetch/HTTP calls — pure local logic", "passed": true, "evidence": "Only imports are @elgato-stream-deck/node and sharp; no fetch, http, axios, or network calls present"}
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "pomodoro-timer",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 8,
+        "failed": 0,
+        "total": 8,
+        "time_seconds": 113.7,
+        "tokens": 33410,
+        "tool_calls": null,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "package.json includes @elgato-stream-deck/node as a dependency", "passed": true, "evidence": "\"@elgato-stream-deck/node\": \"^6.0.0\" present in dependencies"},
+        {"text": "package.json includes sharp as a dependency", "passed": true, "evidence": "\"sharp\": \"^0.33.0\" present in dependencies"},
+        {"text": "setInterval or setTimeout used for per-second countdown", "passed": true, "evidence": "tickInterval = setInterval(async () => { ... }, 1000) in startTick() at line 209"},
+        {"text": "MM:SS format countdown is rendered onto the button", "passed": true, "evidence": "formatTime() returns padded MM:SS string; mainText = formatTime(secondsLeft) rendered in SVG text element via buildKeyImage()"},
+        {"text": "Button color changes based on timer state (at least two distinct colors for running/done)", "passed": true, "evidence": "bgColor '#0d2b0d' (dark green) when running, '#111111' when idle/paused, '#9b1c00' (red) when done"},
+        {"text": "deck.on('down') handler toggles start/pause", "passed": true, "evidence": "deck.on('down', async (control) => { ... await handlePress(deck) }) at line 301; handlePress() state machine toggles idle/running/paused/done"},
+        {"text": "Reset logic is present (either on DONE click or separate mechanism)", "passed": true, "evidence": "handlePress() case 'done': resets secondsLeft = POMODORO_SECONDS and timerState = 'idle' at lines 268-270"},
+        {"text": "No external fetch/HTTP calls — pure local logic", "passed": true, "evidence": "Only imports are @elgato-stream-deck/node and sharp; no fetch, http, axios, or network calls present"}
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "system-volume-encoder",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 8,
+        "failed": 0,
+        "total": 8,
+        "time_seconds": 53.8,
+        "tokens": 21802,
+        "tool_calls": null,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "package.json includes @elgato-stream-deck/node as a dependency", "passed": true, "evidence": "\"@elgato-stream-deck/node\": \"^7.6.2\" present in dependencies"},
+        {"text": "package.json includes sharp as a dependency", "passed": true, "evidence": "\"sharp\": \"^0.34.5\" present in dependencies"},
+        {"text": "deck.on('rotate') handler is present for encoder rotation", "passed": true, "evidence": "deck.on('rotate', async (control, ticks) => { ... }) at line 212"},
+        {"text": "osascript is used to get or set system volume", "passed": true, "evidence": "getSystemVolume() calls execSync('osascript -e \"output volume of (get volume settings)\"') and setSystemVolume() calls execSync with 'set volume output volume'"},
+        {"text": "Rotation is debounced or throttled to avoid flooding osascript calls", "passed": true, "evidence": "clearTimeout(volumeTimer); volumeTimer = setTimeout(async () => { setSystemVolume(pendingVolume) ... }, 100) — 100ms debounce on rotation"},
+        {"text": "Encoder press (deck.on 'down' with encoder type) toggles mute", "passed": true, "evidence": "deck.on('down', async (control) => { if (control.type !== 'encoder') return; ... toggleMute(currentMuted) }) at line 238"},
+        {"text": "fillLcd or equivalent is called to update the LCD strip", "passed": true, "evidence": "deck.fillLcd(0, lcdBuf, { format: 'rgb', width: 800, height: 100 }) called in render() at line 161"},
+        {"text": "Volume percentage is shown on the LCD display", "passed": true, "evidence": "renderLcd() SVG includes statusText = muted ? 'MUTED' : '${volume}%' rendered as a text element on the LCD"}
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "system-volume-encoder",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 8,
+        "failed": 0,
+        "total": 8,
+        "time_seconds": 68.0,
+        "tokens": 24413,
+        "tool_calls": null,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "package.json includes @elgato-stream-deck/node as a dependency", "passed": true, "evidence": "\"@elgato-stream-deck/node\": \"^7.6.2\" present in dependencies"},
+        {"text": "package.json includes sharp as a dependency", "passed": true, "evidence": "\"sharp\": \"^0.34.5\" present in dependencies"},
+        {"text": "deck.on('rotate') handler is present for encoder rotation", "passed": true, "evidence": "deck.on('rotate', async (control, ticks) => { ... }) at line 140"},
+        {"text": "osascript is used to get or set system volume", "passed": true, "evidence": "getVolume() calls execFileSync('osascript', ['-e', 'output volume of (get volume settings)']); setVolume() calls execFileSync with 'set volume output volume'"},
+        {"text": "Rotation is debounced or throttled to avoid flooding osascript calls", "passed": true, "evidence": "clearTimeout(volumeTimer); volumeTimer = setTimeout(async () => { setVolume(pendingVolume) ... }, 100) — 100ms debounce at line 154"},
+        {"text": "Encoder press (deck.on 'down' with encoder type) toggles mute", "passed": true, "evidence": "deck.on('down', async (control) => { if (control.type !== 'encoder') return; ... setMuted(currentMuted) }) at line 174"},
+        {"text": "fillLcd or equivalent is called to update the LCD strip", "passed": true, "evidence": "deck.fillLcd(0, lcdBuf, { format: 'rgb', width: 800, height: 100 }) called in render() at line 124"},
+        {"text": "Volume percentage is shown on the LCD display", "passed": true, "evidence": "renderLcd() SVG includes labelText = muted ? 'MUTED' : '${volume}%' rendered as a bold text element at x=w/2"}
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 4,
+      "eval_name": "window-layout-launcher",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 8,
+        "failed": 0,
+        "total": 8,
+        "time_seconds": 67.8,
+        "tokens": 21874,
+        "tool_calls": null,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "package.json includes @elgato-stream-deck/node as a dependency", "passed": true, "evidence": "\"@elgato-stream-deck/node\": \"^7.6.2\" present in dependencies"},
+        {"text": "package.json includes sharp as a dependency", "passed": true, "evidence": "\"sharp\": \"^0.34.5\" present in dependencies"},
+        {"text": "Three distinct buttons are defined for Focus, Meeting, and Communication layouts", "passed": true, "evidence": "BUTTONS = { FOCUS: 0, MEETING: 1, COMMS: 2 } and BUTTON_DEFS array with three entries"},
+        {"text": "osascript or execSync is used to run AppleScript", "passed": true, "evidence": "runScript() calls execSync('osascript -e ...') and runScriptFile() calls execSync('osascript', { input: scriptText })"},
+        {"text": "AppleScript 'set bounds' or equivalent is used to position/resize windows", "passed": true, "evidence": "'set bounds of front window to {...}' used in all three layout scripts for Chrome, iTerm"},
+        {"text": "Apps are activated or opened if not already running", "passed": true, "evidence": "'tell application \"zoom.us\" to activate', 'tell application \"Obsidian\" to activate', 'tell application \"Slack\" to activate' in layout scripts"},
+        {"text": "Each button has a distinct label and icon identifying the layout", "passed": true, "evidence": "BUTTON_DEFS: {icon:'🎯', label:'Focus'}, {icon:'📹', label:'Meeting'}, {icon:'💬', label:'Comms'} — each rendered via renderButton()"},
+        {"text": "No external npm packages beyond @elgato-stream-deck/node and sharp are required", "passed": true, "evidence": "package.json dependencies only contain @elgato-stream-deck/node and sharp; code only uses built-in node:child_process"}
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 4,
+      "eval_name": "window-layout-launcher",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 8,
+        "failed": 0,
+        "total": 8,
+        "time_seconds": 78.1,
+        "tokens": 29086,
+        "tool_calls": null,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "package.json includes @elgato-stream-deck/node as a dependency", "passed": true, "evidence": "\"@elgato-stream-deck/node\": \"^7.6.2\" present in dependencies"},
+        {"text": "package.json includes sharp as a dependency", "passed": true, "evidence": "\"sharp\": \"^0.34.5\" present in dependencies"},
+        {"text": "Three distinct buttons are defined for Focus, Meeting, and Communication layouts", "passed": true, "evidence": "BUTTONS array with three entries: index 0 (Focus), index 1 (Meeting), index 2 (Comms)"},
+        {"text": "osascript or execSync is used to run AppleScript", "passed": true, "evidence": "runAppleScript() calls execFileAsync('osascript', ['-e', script]); used throughout all layout functions"},
+        {"text": "AppleScript 'set bounds' or equivalent is used to position/resize windows", "passed": true, "evidence": "'set bounds of front window to {0, 0, half, height}' for Chrome/iTerm in Focus; 'set position of front window' for Zoom in Meeting"},
+        {"text": "Apps are activated or opened if not already running", "passed": true, "evidence": "'tell application \"Slack\" to activate', 'tell application \"Google Chrome\" to activate', 'tell application \"zoom.us\" to activate'"},
+        {"text": "Each button has a distinct label and icon identifying the layout", "passed": true, "evidence": "BUTTONS array: {icon:'🎯', label:'Focus'}, {icon:'📹', label:'Meeting'}, {icon:'💬', label:'Comms'} — each rendered via renderButton()"},
+        {"text": "No external npm packages beyond @elgato-stream-deck/node and sharp are required", "passed": true, "evidence": "package.json dependencies only contain @elgato-stream-deck/node and sharp; code only uses built-in node:child_process and node:util"}
+      ],
+      "notes": []
+    }
+  ],
+
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {"mean": 1.0, "stddev": 0.0, "min": 1.0, "max": 1.0},
+      "time_seconds": {"mean": 56.9, "stddev": 9.5, "min": 43.0, "max": 67.8},
+      "tokens": {"mean": 21344, "stddev": 742, "min": 20067, "max": 21874}
+    },
+    "without_skill": {
+      "pass_rate": {"mean": 1.0, "stddev": 0.0, "min": 1.0, "max": 1.0},
+      "time_seconds": {"mean": 84.9, "stddev": 17.2, "min": 68.0, "max": 113.7},
+      "tokens": {"mean": 27600, "stddev": 3969, "min": 23489, "max": 33410}
+    },
+    "delta": {
+      "pass_rate": "+0.00",
+      "time_seconds": "-28.0",
+      "tokens": "-6256"
+    }
+  },
+
+  "notes": [
+    "All 32 assertions pass (8/8) in both with_skill and without_skill configurations — assertions do not differentiate skill value on correctness.",
+    "The skill's real value is efficiency: 33% faster (56.9s vs 84.9s mean) and 23% fewer tokens (21,344 vs 27,600 mean).",
+    "Pomodoro-timer is the most discriminating eval: with_skill completed in 43s vs 113.7s without — a 2.6x speedup. This is because the skill provides the exact Block Artifactory registry URL, sharp rendering pattern, and render guard pattern up front, avoiding exploratory tool calls.",
+    "Window-layout-launcher shows the smallest efficiency gap (67.8s vs 78.1s, 21,874 vs 29,086 tokens) — AppleScript window management is fairly self-contained and less reliant on the Stream Deck-specific patterns the skill teaches.",
+    "The without_skill pomodoro run used @elgato-stream-deck/node v6.0.0 and sharp v0.33.0 (older versions) — the skill correctly pins v7.6.2 and v0.34.5 which are confirmed available on Block Artifactory.",
+    "Future assertion candidates that would better discriminate: render guard pattern present (rendering flag + lastRenderedKey), Block Artifactory registry URL in .npmrc or package.json, clearPanel() not called in poll cycle."
+  ]
+}

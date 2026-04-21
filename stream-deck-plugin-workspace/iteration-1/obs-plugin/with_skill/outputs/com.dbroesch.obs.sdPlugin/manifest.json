@@ -1,0 +1,81 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+  "UUID": "com.dbroesch.obs",
+  "Name": "OBS Studio Controller",
+  "Version": "1.0.0",
+  "SDKVersion": 2,
+  "Author": "David Broesch",
+  "Description": "Control OBS Studio from your Stream Deck. Start/stop recording, toggle streaming, mute/unmute microphone, and switch scenes.",
+  "Category": "OBS Studio",
+  "CategoryIcon": "imgs/plugin/category-icon",
+  "Icon": "imgs/plugin/icon",
+  "CodePath": "bin/plugin.js",
+  "Software": { "MinimumVersion": "6.5" },
+  "OS": [
+    { "Platform": "mac", "MinimumVersion": "10.15" },
+    { "Platform": "windows", "MinimumVersion": "10" }
+  ],
+  "Nodejs": { "Version": "20", "Debug": "enabled" },
+  "ApplicationsToMonitor": {
+    "mac": ["com.obsproject.obs-studio"],
+    "windows": ["obs64.exe"]
+  },
+  "Actions": [
+    {
+      "UUID": "com.dbroesch.obs.record",
+      "Name": "Toggle Recording",
+      "Tooltip": "Start or stop OBS recording",
+      "Icon": "imgs/actions/record/icon",
+      "States": [
+        { "Image": "imgs/actions/record/key-idle", "Title": "Record" },
+        { "Image": "imgs/actions/record/key-active", "Title": "Stop REC" }
+      ],
+      "Controllers": ["Keypad"],
+      "PropertyInspectorPath": "ui/obs-pi.html"
+    },
+    {
+      "UUID": "com.dbroesch.obs.stream",
+      "Name": "Toggle Streaming",
+      "Tooltip": "Start or stop OBS streaming",
+      "Icon": "imgs/actions/stream/icon",
+      "States": [
+        { "Image": "imgs/actions/stream/key-idle", "Title": "Stream" },
+        { "Image": "imgs/actions/stream/key-active", "Title": "Live" }
+      ],
+      "Controllers": ["Keypad"],
+      "PropertyInspectorPath": "ui/obs-pi.html"
+    },
+    {
+      "UUID": "com.dbroesch.obs.mute",
+      "Name": "Mute Microphone",
+      "Tooltip": "Toggle mute on your microphone input source",
+      "Icon": "imgs/actions/mute/icon",
+      "States": [
+        { "Image": "imgs/actions/mute/key-unmuted", "Title": "Mic ON" },
+        { "Image": "imgs/actions/mute/key-muted", "Title": "Muted" }
+      ],
+      "Controllers": ["Keypad"],
+      "PropertyInspectorPath": "ui/obs-pi.html"
+    },
+    {
+      "UUID": "com.dbroesch.obs.scene",
+      "Name": "Scene Switcher",
+      "Tooltip": "Switch to a specific OBS scene; shows current scene name on button",
+      "Icon": "imgs/actions/scene/icon",
+      "States": [
+        { "Image": "imgs/actions/scene/key-inactive" },
+        { "Image": "imgs/actions/scene/key-active" }
+      ],
+      "Controllers": ["Keypad"],
+      "PropertyInspectorPath": "ui/scene-pi.html"
+    }
+  ],
+  "Profiles": [
+    {
+      "Name": "OBS Controller",
+      "DeviceType": 0,
+      "File": "profiles/OBSController.streamDeckProfile",
+      "AutoInstall": true
+    }
+  ]
+}

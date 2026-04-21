@@ -1,0 +1,97 @@
+{
+  "run_metadata": {
+    "date": "2026-04-20",
+    "skill_version": "data-discovery v1",
+    "model": "claude-sonnet-4-6",
+    "task": "eval-multi-table-sql",
+    "tables_in_query": 3,
+    "sql_query": "SELECT u.user_token, t.amount, t.created_at, r.score FROM CASH_APP.IDENTITY.USER_PROFILES u JOIN CASH_APP.PAYMENTS.TXN_LEDGER t ON u.user_token = t.user_token JOIN CASH_APP.RISK.MODEL_SCORES r ON t.txn_id = r.entity_id WHERE r.model_name = 'fraud_v3' AND t.created_at >= '2025-01-01'"
+  },
+  "sources_attempted": {
+    "snowflake_connector": {
+      "status": "unavailable",
+      "reason": "snowflake-connector-python not installed",
+      "runnable_sql_provided": true
+    },
+    "notion": {
+      "status": "success",
+      "searches": 6,
+      "pages_fetched": 5,
+      "key_pages": [
+        "Cash Identity Data Guide (go/identitydataguide)",
+        "Querying Banklin Ledger Data",
+        "Model Manager",
+        "Risk ML Scored Events Table",
+        "General Snowflake Tables"
+      ]
+    },
+    "linear": {
+      "status": "success",
+      "searches": 3,
+      "relevant_issues_found": 6,
+      "key_issues": [
+        "DIT-40 (RISK_EVALUATION_MODEL_SCORES backfill, active)",
+        "DATAOPS-1098 (same backfill, active)",
+        "TXS-68 (transaction token format in ledger)",
+        "FAB-2142 (fraud model validation)",
+        "FAB-461 (model scores data location)"
+      ]
+    },
+    "slack": {
+      "status": "auth_expired",
+      "error": "invalid_auth — xoxp token needs refresh",
+      "fallback": "channel recommendations provided from Notion docs"
+    },
+    "atlassian_confluence": {
+      "status": "skipped",
+      "reason": "tokens not configured (CONFLUENCE_API_TOKEN=REPLACE)"
+    },
+    "github": {
+      "status": "skipped",
+      "reason": "MCP not configured for search in this session"
+    },
+    "google_drive": {
+      "status": "skipped",
+      "reason": "not attempted in this session"
+    }
+  },
+  "findings": {
+    "critical_flags": [
+      "All three tables use non-standard CASH_APP prefix — correct prefix is APP_CASH",
+      "No table confirmed to exist in Snowflake under the names in the query",
+      "All three schema names (IDENTITY, PAYMENTS, RISK) are non-standard"
+    ],
+    "canonical_replacements": {
+      "CASH_APP.IDENTITY.USER_PROFILES": "APP_CASH.APP.CUSTOMER_SUMMARY or APP_CASH.HEALTH.IDENTITY_IDV_ATTEMPTS",
+      "CASH_APP.PAYMENTS.TXN_LEDGER": "APP_CASH.BANKLIN.TRANSACTIONS",
+      "CASH_APP.RISK.MODEL_SCORES": "APP_CASH.APP.RISK_ML_SCORED_EVENTS"
+    },
+    "pii_risk": "HIGH — joining user identity + transaction amount + fraud score; likely DSL3 depending on which identity table is used",
+    "query_safe_to_run": false,
+    "query_safe_reason": "Non-existent database prefix; column names likely wrong; PII sensitivity; fraud_v3 model name unverified",
+    "data_migration_in_progress": true,
+    "migration_details": "RISK_EVALUATION_MODEL_SCORES_RISK_INPUT being backfilled to S3/Iceberg (DIT-40, DATAOPS-1098, active as of 2026-04-16)"
+  },
+  "quality_metrics": {
+    "tables_identified": 3,
+    "tables_with_canonical_replacement": 3,
+    "tables_confirmed_in_snowflake": 0,
+    "schema_anomaly_detected": true,
+    "notion_docs_found": 5,
+    "linear_issues_found": 6,
+    "experts_identified": 5,
+    "channels_identified": 3,
+    "rewritten_query_provided": true,
+    "sources_with_data": 2,
+    "sources_unavailable": 5
+  },
+  "skill_performance": {
+    "naming_anomaly_detection": "PASS — CASH_APP prefix correctly flagged as non-standard",
+    "canonical_table_resolution": "PASS — all three tables resolved to known canonical equivalents via Notion docs",
+    "multi_table_synthesis": "PASS — cross-table synthesis section completed with join analysis",
+    "pii_assessment": "PASS — DSL3 risk identified",
+    "actionable_next_steps": "PASS — 4 specific next steps provided with channel names and SQL",
+    "graceful_degradation": "PASS — Snowflake unavailable handled; Slack auth failure handled; runnable SQL provided",
+    "rewrite_provided": "PASS — corrected query draft included"
+  }
+}

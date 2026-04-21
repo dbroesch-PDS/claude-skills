@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
+  <rect width="40" height="40" rx="6" fill="#1a1a1a"/>
+  <!-- Film frame / scene icon -->
+  <rect x="7" y="10" width="26" height="20" rx="3" fill="none" stroke="#f0a500" stroke-width="2"/>
+  <!-- Film sprocket holes -->
+  <rect x="7" y="13" width="4" height="4" rx="1" fill="#f0a500"/>
+  <rect x="7" y="21" width="4" height="4" rx="1" fill="#f0a500"/>
+  <rect x="29" y="13" width="4" height="4" rx="1" fill="#f0a500"/>
+  <rect x="29" y="21" width="4" height="4" rx="1" fill="#f0a500"/>
+  <!-- Play arrow -->
+  <polygon points="16,14 16,26 28,20" fill="#f0a500"/>
+</svg>

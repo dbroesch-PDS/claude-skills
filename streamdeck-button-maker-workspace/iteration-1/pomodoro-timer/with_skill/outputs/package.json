@@ -1,0 +1,10 @@
+{
+  "name": "pomodoro-timer-streamdeck",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "scripts": { "start": "node index.js" },
+  "dependencies": {
+    "@elgato-stream-deck/node": "^7.6.2",
+    "sharp": "^0.34.5"
+  }
+}

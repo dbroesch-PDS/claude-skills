@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub PRs — Settings</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px;
+      color: #c9d1d9;
+      background: #0d1117;
+      padding: 12px;
+      min-height: 100vh;
+    }
+
+    h3 {
+      color: #e6edf3;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #21262d;
+    }
+
+    .section {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 11px;
+      color: #8b949e;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 6px 8px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      color: #c9d1d9;
+      font-size: 13px;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: #388bfd;
+      box-shadow: 0 0 0 3px rgba(56, 139, 253, 0.15);
+    }
+
+    button {
+      width: 100%;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: #238636;
+      border-color: #2ea043;
+      color: #ffffff;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #2ea043;
+    }
+
+    .btn-danger {
+      background: transparent;
+      border-color: #f85149;
+      color: #f85149;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: rgba(248, 81, 73, 0.1);
+    }
+
+    .btn-secondary {
+      background: #21262d;
+      border-color: #30363d;
+      color: #c9d1d9;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #30363d;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .status-badge.connected {
+      background: rgba(63, 185, 80, 0.15);
+      color: #3fb950;
+    }
+
+    .status-badge.disconnected {
+      background: rgba(139, 148, 158, 0.15);
+      color: #8b949e;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .helper-text {
+      font-size: 11px;
+      color: #8b949e;
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    .helper-text a {
+      color: #388bfd;
+      text-decoration: none;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      background: #161b22;
+      border: 1px solid #21262d;
+      border-radius: 6px;
+    }
+
+    .user-name {
+      font-weight: 600;
+      color: #e6edf3;
+    }
+
+    .pr-count-display {
+      padding: 8px 10px;
+      background: #161b22;
+      border: 1px solid #21262d;
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    .pr-count-number {
+      font-size: 28px;
+      font-weight: 700;
+      color: #f78166;
+      line-height: 1;
+    }
+
+    .pr-count-number.zero {
+      color: #3fb950;
+    }
+
+    .pr-count-label {
+      font-size: 11px;
+      color: #8b949e;
+      margin-top: 2px;
+    }
+
+    .hidden { display: none; }
+    .spacer { margin-top: 8px; }
+  </style>
+</head>
+<body>
+
+  <!-- Section: Status -->
+  <div class="section">
+    <h3>GitHub Connection</h3>
+    <div id="status-connected" class="hidden">
+      <div class="user-info">
+        <span class="user-name" id="username-display">@user</span>
+        <span class="status-badge connected">
+          <span class="status-dot"></span>Connected
+        </span>
+      </div>
+      <div class="spacer">
+        <div class="pr-count-display">
+          <div class="pr-count-number" id="pr-count-display">—</div>
+          <div class="pr-count-label">open PRs assigned to you</div>
+        </div>
+      </div>
+      <div class="spacer">
+        <button class="btn-danger" id="btn-disconnect">Disconnect</button>
+      </div>
+    </div>
+
+    <div id="status-disconnected">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span class="status-badge disconnected">
+          <span class="status-dot"></span>Not connected
+        </span>
+      </div>
+
+      <div class="section">
+        <label>GitHub OAuth App Client ID</label>
+        <input type="text" id="client-id-input" placeholder="Ov23li..." autocomplete="off" spellcheck="false"/>
+        <p class="helper-text">
+          Create a GitHub OAuth App at
+          <a href="https://github.com/settings/developers" id="gh-dev-link">github.com/settings/developers</a>.
+          Set the callback URL to <code>http://127.0.0.1</code> (any port).
+        </p>
+      </div>
+
+      <button class="btn-secondary spacer" id="btn-save-client-id" style="margin-bottom:6px">Save Client ID</button>
+      <button class="btn-primary" id="btn-connect" disabled>Connect with GitHub</button>
+    </div>
+  </div>
+
+  <script>
+    let ws = null;
+    let pluginContext = null;
+    let isAuthorized = false;
+
+    function connectElgatoStreamDeckSocket(port, uuid, registerEvent, info, actionInfo) {
+      const parsed = JSON.parse(actionInfo);
+      pluginContext = parsed.context;
+
+      ws = new WebSocket(`ws://localhost:${port}`);
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ event: registerEvent, uuid }));
+        ws.send(JSON.stringify({ event: "getSettings", context: pluginContext }));
+        // Request current status from plugin
+        sendToPlugin({ action: "getStatus" });
+      };
+
+      ws.onmessage = ({ data }) => {
+        const msg = JSON.parse(data);
+
+        if (msg.event === "sendToPropertyInspector") {
+          handlePluginMessage(msg.payload);
+        }
+
+        if (msg.event === "didReceiveGlobalSettings") {
+          const s = msg.payload.settings;
+          if (s.clientId) {
+            document.getElementById("client-id-input").value = s.clientId;
+          }
+        }
+      };
+
+      // Load global settings to pre-fill client ID
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ event: registerEvent, uuid }));
+        ws.send(JSON.stringify({ event: "getGlobalSettings", context: uuid }));
+      };
+
+      ws.addEventListener("open", () => {
+        sendToPlugin({ action: "getStatus" });
+      });
+    }
+
+    function handlePluginMessage(payload) {
+      isAuthorized = payload.isAuthorized;
+
+      if (isAuthorized) {
+        document.getElementById("status-connected").classList.remove("hidden");
+        document.getElementById("status-disconnected").classList.add("hidden");
+
+        const usernameEl = document.getElementById("username-display");
+        usernameEl.textContent = payload.username ? `@${payload.username}` : "Connected";
+
+        const prCountEl = document.getElementById("pr-count-display");
+        if (payload.prCount !== null && payload.prCount !== undefined) {
+          prCountEl.textContent = String(payload.prCount);
+          prCountEl.classList.toggle("zero", payload.prCount === 0);
+        } else {
+          prCountEl.textContent = "—";
+        }
+      } else {
+        document.getElementById("status-connected").classList.add("hidden");
+        document.getElementById("status-disconnected").classList.remove("hidden");
+
+        if (payload.clientId) {
+          document.getElementById("client-id-input").value = payload.clientId;
+          document.getElementById("btn-connect").disabled = false;
+        }
+      }
+    }
+
+    function sendToPlugin(payload) {
+      if (!ws || ws.readyState !== WebSocket.OPEN || !pluginContext) return;
+      ws.send(JSON.stringify({
+        event: "sendToPlugin",
+        context: pluginContext,
+        payload,
+      }));
+    }
+
+    // Save client ID
+    document.getElementById("btn-save-client-id").addEventListener("click", () => {
+      const clientId = document.getElementById("client-id-input").value.trim();
+      if (!clientId) return;
+      sendToPlugin({ action: "saveClientId", clientId });
+      document.getElementById("btn-connect").disabled = false;
+    });
+
+    // Enable connect button when client ID is typed
+    document.getElementById("client-id-input").addEventListener("input", (e) => {
+      document.getElementById("btn-connect").disabled = !e.target.value.trim();
+    });
+
+    // Connect with GitHub
+    document.getElementById("btn-connect").addEventListener("click", () => {
+      const btn = document.getElementById("btn-connect");
+      btn.disabled = true;
+      btn.textContent = "Opening browser...";
+      sendToPlugin({ action: "startAuth" });
+
+      // Re-enable after timeout in case the flow fails
+      setTimeout(() => {
+        if (!isAuthorized) {
+          btn.disabled = false;
+          btn.textContent = "Connect with GitHub";
+        }
+      }, 60000);
+    });
+
+    // Disconnect
+    document.getElementById("btn-disconnect").addEventListener("click", () => {
+      sendToPlugin({ action: "disconnectAuth" });
+    });
+
+    // Open GitHub developers page
+    document.getElementById("gh-dev-link").addEventListener("click", (e) => {
+      e.preventDefault();
+      sendToPlugin({ action: "openUrl", url: "https://github.com/settings/developers" });
+    });
+  </script>
+</body>
+</html>

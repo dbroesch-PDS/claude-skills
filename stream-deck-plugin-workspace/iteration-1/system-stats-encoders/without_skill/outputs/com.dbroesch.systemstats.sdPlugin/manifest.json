@@ -1,0 +1,74 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+  "UUID": "com.dbroesch.systemstats",
+  "Name": "System Stats",
+  "Version": "1.0.0",
+  "SDKVersion": 2,
+  "Author": "David Broesch",
+  "Description": "Live CPU, RAM, and network stats on Stream Deck Plus encoder dials. Press any dial to refresh.",
+  "Category": "System",
+  "CategoryIcon": "imgs/plugin/category-icon",
+  "Icon": "imgs/plugin/icon",
+  "CodePath": "bin/plugin.js",
+  "Software": { "MinimumVersion": "6.5" },
+  "OS": [{ "Platform": "mac", "MinimumVersion": "10.15" }],
+  "Nodejs": { "Version": "20", "Debug": "enabled" },
+  "Actions": [
+    {
+      "UUID": "com.dbroesch.systemstats.cpu",
+      "Name": "CPU Usage",
+      "Tooltip": "Shows current CPU usage. Press to refresh all stats.",
+      "Icon": "imgs/actions/cpu/icon",
+      "States": [{ "Image": "imgs/actions/cpu/key" }],
+      "Controllers": ["Encoder"],
+      "Encoder": {
+        "layout": "$A1",
+        "TriggerDescription": {
+          "Rotate": "No action (read-only display)",
+          "Push": "Refresh all stats",
+          "Touch": "Show CPU info"
+        }
+      }
+    },
+    {
+      "UUID": "com.dbroesch.systemstats.ram",
+      "Name": "RAM Usage",
+      "Tooltip": "Shows current RAM usage. Press to refresh all stats.",
+      "Icon": "imgs/actions/ram/icon",
+      "States": [{ "Image": "imgs/actions/ram/key" }],
+      "Controllers": ["Encoder"],
+      "Encoder": {
+        "layout": "$A1",
+        "TriggerDescription": {
+          "Rotate": "No action (read-only display)",
+          "Push": "Refresh all stats",
+          "Touch": "Show RAM info"
+        }
+      }
+    },
+    {
+      "UUID": "com.dbroesch.systemstats.network",
+      "Name": "Network Activity",
+      "Tooltip": "Shows current network TX+RX rate. Press to refresh all stats.",
+      "Icon": "imgs/actions/network/icon",
+      "States": [{ "Image": "imgs/actions/network/key" }],
+      "Controllers": ["Encoder"],
+      "Encoder": {
+        "layout": "$A1",
+        "TriggerDescription": {
+          "Rotate": "No action (read-only display)",
+          "Push": "Refresh all stats",
+          "Touch": "Show network info"
+        }
+      }
+    }
+  ],
+  "Profiles": [
+    {
+      "Name": "System Stats",
+      "DeviceType": 7,
+      "File": "profiles/SystemStats.streamDeckProfile",
+      "AutoInstall": true
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "run_date": "2026-04-20",
+  "query": "who owns the COMPLIANCE schema in Snowflake? I need to request access to some tables in there and I don't know who to ask or where to find docs on what's in it",
+  "subject": {
+    "database": "APP_COMPLIANCE",
+    "schema": null,
+    "table": null,
+    "type": "schema-owner-discovery"
+  },
+  "sources_attempted": {
+    "snowflake": {
+      "status": "failed",
+      "reason": "snowflake-connector-python not installed",
+      "data_retrieved": false
+    },
+    "notion": {
+      "status": "success",
+      "pages_found": 12,
+      "pages_fetched": 9,
+      "key_pages": [
+        "Compliance Data Science & Analytics (CAX) Team",
+        "Compliance Customer Data",
+        "CCD: Customer Attribute Snowflake Table",
+        "Bitcoin Snowflake Tables",
+        "Transaction Monitoring Table Specs",
+        "Notary Bulk Closure",
+        "Compliance Customer Data Runbook",
+        "Notary: Snowflake Data"
+      ]
+    },
+    "slack": {
+      "status": "failed",
+      "reason": "invalid_auth — token expired in mcp-credentials.md",
+      "data_retrieved": false,
+      "fallback": "Slack channel names recovered from Notion documentation"
+    },
+    "linear": {
+      "status": "partial",
+      "reason": "Only returned Linear product documentation, not Block-internal issues",
+      "data_retrieved": false
+    },
+    "confluence": {
+      "status": "not_attempted",
+      "reason": "Atlassian MCP not authenticated in this session"
+    },
+    "google_drive": {
+      "status": "not_attempted",
+      "reason": "No Drive search performed — sufficient information found in Notion"
+    }
+  },
+  "key_findings": {
+    "owner_identified": true,
+    "owner_team": "Compliance Program Engineering / CAX (Compliance Data Science & Analytics)",
+    "access_path_identified": true,
+    "access_channels": [
+      "#compliance-data-access (Slack)",
+      "go/caxrequest (Jira intake form)",
+      "registry.sqprod.co APP_COMPLIANCE__SNOWFLAKE__READ_ONLY group"
+    ],
+    "tables_documented": 5,
+    "schemas_identified": ["CASH", "SNOOP"],
+    "pii_flagged": true,
+    "access_restrictions_noted": true
+  },
+  "answer_completeness": {
+    "who_owns_it": "high",
+    "how_to_request_access": "high",
+    "what_tables_exist": "medium",
+    "docs_found": "high",
+    "experts_identified": "medium"
+  },
+  "total_notion_searches": 5,
+  "total_notion_pages_fetched": 9,
+  "skill_execution_notes": [
+    "Snowflake direct query unavailable - connector not installed",
+    "Slack auth failed - token needs refresh",
+    "Notion was the primary data source and was highly productive",
+    "The APP_COMPLIANCE Snowflake database is well-documented in Notion via the CAX team page, CCD service docs, and Bitcoin Data Science tables page",
+    "Registry group APP_COMPLIANCE__SNOWFLAKE__READ_ONLY identified as the access mechanism"
+  ]
+}

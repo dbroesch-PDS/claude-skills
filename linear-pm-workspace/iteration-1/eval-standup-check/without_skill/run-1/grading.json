@@ -1,0 +1,34 @@
+{
+  "eval_id": 3,
+  "eval_name": "eval-standup-check",
+  "configuration": "without_skill",
+  "expectations": [
+    {
+      "text": "Attempts linear_list_issues with an In Progress state filter, or explicitly describes doing so",
+      "passed": false,
+      "evidence": "Says it can't access Linear and lists what it would need \u2014 does not attempt or describe the tool call"
+    },
+    {
+      "text": "Response is structured and readable \u2014 not a raw JSON dump",
+      "passed": true,
+      "evidence": "Clean structured text with headers \u2014 no JSON"
+    },
+    {
+      "text": "Calls out or flags any items that appear blocked or stale",
+      "passed": false,
+      "evidence": "No issues retrieved \u2014 nothing to flag"
+    },
+    {
+      "text": "Response is concise enough to be useful in a standup context",
+      "passed": true,
+      "evidence": "Short response, but provides no actionable data"
+    }
+  ],
+  "pass_rate": 0.5,
+  "summary": {
+    "pass_rate": 0.5,
+    "passed": 2,
+    "failed": 2,
+    "total": 4
+  }
+}

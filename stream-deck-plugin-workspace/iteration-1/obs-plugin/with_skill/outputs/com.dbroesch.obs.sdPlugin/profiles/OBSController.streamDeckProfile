@@ -1,0 +1,18 @@
+{
+  "Name": "OBS Controller",
+  "DeviceType": 0,
+  "Pages": {
+    "0": {
+      "Actions": {
+        "0,0": { "UUID": "com.dbroesch.obs.record", "Settings": {} },
+        "1,0": { "UUID": "com.dbroesch.obs.stream", "Settings": {} },
+        "2,0": { "UUID": "com.dbroesch.obs.mute", "Settings": {} },
+        "3,0": { "UUID": "com.dbroesch.obs.scene", "Settings": { "sceneName": "Scene 1" } },
+        "4,0": { "UUID": "com.dbroesch.obs.scene", "Settings": { "sceneName": "Scene 2" } },
+        "0,1": { "UUID": "com.dbroesch.obs.scene", "Settings": { "sceneName": "Scene 3" } },
+        "1,1": { "UUID": "com.dbroesch.obs.scene", "Settings": { "sceneName": "Scene 4" } },
+        "2,1": { "UUID": "com.dbroesch.obs.scene", "Settings": { "sceneName": "Scene 5" } }
+      }
+    }
+  }
+}

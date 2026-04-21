@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">
+  <rect width="144" height="144" rx="16" fill="#1a1a1a"/>
+  <!-- Record button circle -->
+  <circle cx="72" cy="60" r="32" fill="none" stroke="#555" stroke-width="4"/>
+  <circle cx="72" cy="60" r="20" fill="#ed4245"/>
+  <!-- Label -->
+  <text x="72" y="112" font-family="-apple-system, sans-serif" font-size="20" font-weight="600" fill="#ececec" text-anchor="middle">REC</text>
+</svg>
