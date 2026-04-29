@@ -127,3 +127,24 @@ Every formal document follows this skeleton:
 - Don't use 10 words when 3 work.
 - Don't mix formatting styles mid-document.
 - Don't leave action items without owners or deadlines.
+
+---
+
+## Contradiction Scanning
+
+Before finalizing or publishing any document, scan for internal contradictions. This is especially important for living documents updated incrementally from multiple sources (Slack, docs, meetings).
+
+**Common contradiction patterns to check:**
+- A status shown as "pending" or "TBD" elsewhere in the same doc is confirmed elsewhere (e.g., a stat box says "6%" but a gap section says "% unknown")
+- A task marked "not started" in a checklist is confirmed done in a timeline or Slack section
+- A metric or benchmark is presented without caveat when the underlying conditions have materially changed (e.g., historical benchmarks that predate a significant operational change like BPO staffing)
+- A step described as "requires X" when X has already been completed
+- A launch described as successful when it was actually non-functional due to a bug
+
+**How to scan:**
+1. Read every status field, checklist item, stat box, and table cell
+2. Cross-reference against all other sections — especially any Slack Intelligence or timeline sections that may have newer information
+3. For each item marked pending/TBD/unknown, check whether it has been resolved elsewhere in the document
+4. Flag or fix any item where two sections contradict each other
+
+When fixing contradictions, always prefer the more recent and specific source (e.g., Slack thread with a timestamp > a design doc with a stale status).

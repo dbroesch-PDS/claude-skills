@@ -103,6 +103,13 @@ The scripts live at `/Users/dbroesch/development/project management/`:
 - `compile_dashboard_data.py` — transforms MCP output to script-ready JSON
 - `generate_dashboard.py` — renders HTML + deploys to Blockcell
 
+**Architecture notes (as of Sprint 2, Q2 2026):**
+- Current sprint cycle IDs are detected **DYNAMICALLY** — no hardcoding needed in the BAK app or the refresh workflow
+- The Q2 accumulated donut (Tab 3) also **auto-discovers** past Q2 cycles dynamically using the `Q2_START` boundary — no `Q2_PAST_CYCLE_IDS` list required
+- Sprint name is derived from the `Q2_START` offset (Sprint 1, Sprint 2, etc.) — no display glitches from manual naming
+- The only thing to update at the start of a new quarter is `Q2_START` in `linearConfig.ts` (BAK app) and `q2_start` in `team-config.json` (Blockcell workflow)
+- The BAK app **auto-refreshes every hour** — no manual refresh needed after deploying a data update
+
 **Full refresh procedure (30–60 sec of tool calls, ~2 min total):**
 
 **1. Auto-detect active cycles** — always query live, never trust saved UUIDs across sprints:
@@ -114,7 +121,7 @@ sq agent-tools linear execute-readonly-query \
 
 Extract the `id`, `startsAt`, and `endsAt` from each team's result. Use these cycle UUIDs for all subsequent issue queries. Update the Saved Team Configurations section with the new cycle UUIDs and mark the previous sprint as ENDED.
 
-**Sprint name/label:** derive from the cycle number and dates (e.g. cycle number 2, Apr 20–May 4 → "Sprint 2", "Apr 20 – May 4, 2026"). If cycle `name` is set in Linear, prefer that.
+**Sprint name/label:** derived automatically from the `Q2_START` offset — Sprint 1 = first 2-week block after Q2_START, Sprint 2 = second block, etc. No manual naming needed. If cycle `name` is set in Linear, that takes precedence.
 
 **2. Fetch cycle issues** — fire all 4 in parallel using the UUIDs from step 1:
 
@@ -191,6 +198,26 @@ Status → `state.type` mapping:
 - **Tab 2 — Team & Sprint:** Sprint burndown SVG (cross-team), collapsible per-person member cards, all-members summary table.
 - **Tab 3 — Work Distribution:** Label breakdown with donut pie charts. Labels are team-specific (e.g., for RADS-DS: Analysis / Automation / Infrastructure / KTLO). Two donuts: (1) current sprint all labeled issues, (2) **Q2 2026 completed issues** — accumulated across all Q2 sprints via `q2_issues` in the data file.
 
+### BAK App (Always-On Dashboard)
+
+The BAK app is a React/TypeScript app deployed separately from the Blockcell static dashboard. It runs live against the Linear API and serves as the primary always-on view.
+
+**Key behaviors:**
+- **Auto-refreshes every hour** — no manual refresh needed after data updates
+- **Dynamic cycle detection** — queries Linear at runtime for the active cycle per team; no hardcoded cycle IDs
+- **Dynamic Q2 accumulation** — discovers all past Q2 cycles automatically using the `Q2_START` boundary; no `Q2_PAST_CYCLE_IDS` list
+- **Sprint numbering** — derived from `Q2_START` offset, not from cycle names; immune to naming inconsistencies
+- **Color scheme** — dark navy/indigo palette matching the Blockcell dashboard
+
+**Configuration file:** `linearConfig.ts` (mirrors `team-config.json`)
+Fields: `TEAMS`, `MEMBERS`, `INITIATIVE_ID`, `Q2_START`, `LABEL_CATEGORIES`
+
+**At new quarter start:** update only `Q2_START` in `linearConfig.ts` and `q2_start` in `team-config.json` — everything else (sprint numbering, Q2 donut, cycle detection) updates automatically.
+
+**Onboarding a new team:** update `linearConfig.ts` (TEAMS, MEMBERS, INITIATIVE_ID, Q2_START, LABEL_CATEGORIES) — everything else is automatic. No cycle UUIDs to manage.
+
+---
+
 ### Setting Up a Dashboard for a New Team
 When the user asks to build a dashboard for a team or org not already configured:
 
@@ -211,9 +238,14 @@ When the user asks to build a dashboard for a team or org not already configured
    - `execute-readonly-query` → `team(id: "<id>") { labels { nodes { id name } } }`
    - Ask the user which labels to feature in the Work Distribution tab (Tab 3)
 
-5. **Create a `team-config.json`** in the project directory (see Team Config File section under Audit Functions). This file drives both the dashboard (Tab 2 member whitelist) and all audit functions — no member data should be hardcoded anywhere else.
+5. **Create a `team-config.json`** in the project directory (see Team Config File section under Audit Functions). This file drives **both** the BAK app (via `linearConfig.ts` which mirrors it) **and** the Blockcell `generate_dashboard.py` workflow. No member data or team IDs should be hardcoded anywhere else.
 
-6. **Save Linear IDs** (team IDs, cycle UUIDs, initiative ID) to the Saved Team Configurations section at the bottom of this file.
+   A new team needs only:
+   - `team-config.json` with the full schema (`initiative_id`, `q2_start`, `teams`, `label_categories`, `manager`, `members`)
+   - `linearConfig.ts` updated to match (TEAMS, MEMBERS, INITIATIVE_ID, Q2_START, LABEL_CATEGORIES)
+   - BAK app deployed — cycle detection, sprint numbering, and Q2 accumulation are all automatic from there
+
+6. **Save Linear IDs** (team IDs, initiative ID) to the Saved Team Configurations section at the bottom of this file. Cycle UUIDs only need to be saved for the Blockcell workflow reference — the BAK app does not require them.
 
 ---
 
@@ -357,6 +389,13 @@ All team member and manager data lives in a local `team-config.json` file — **
 **Schema:**
 ```json
 {
+  "initiative_id": "eb75cdf5-ba66-4701-8282-0633fc4c45d2",
+  "q2_start": "2026-04-06",
+  "label_categories": ["Analysis", "Automation", "Infrastructure", "KTLO"],
+  "teams": {
+    "RADS": "e05affa1-a584-4141-94c8-8ec9ca52248e",
+    "RISKDS": "80e52023-7780-4dde-9234-64567fc4453e"
+  },
   "manager": {
     "name": "...",
     "email": "...",
@@ -369,13 +408,19 @@ All team member and manager data lives in a local `team-config.json` file — **
       "email": "work@company.com",
       "slack_id": "UXXXXXXXX or null",
       "slack_email": "slack_login@company.com",
-      "note": "optional — e.g. uses @block.xyz not @squareup.com",
+      "note": "optional — shown in member card, e.g. uses @block.xyz not @squareup.com",
       "teams": ["TEAM-KEY"],
       "role": "TL (optional)"
     }
   ]
 }
 ```
+
+**Top-level fields (replace hardcoded constants in generate_dashboard.py):**
+- `initiative_id` — Linear UUID for the team's initiative (drives project fetch)
+- `q2_start` — first day of the quarter (YYYY-MM-DD); used for Q2 cycle auto-discovery and sprint numbering
+- `label_categories` — ordered list of work-type labels shown in Tab 3 donuts
+- `teams` — map of Linear team key → team UUID; used for cycle detection and issue queries
 
 **How to use at runtime:**
 1. Load the config: `config = json.load(open("team-config.json"))`
@@ -639,6 +684,8 @@ This section stores discovered team IDs, cycle IDs, and people for each org Davi
 | Support Product-DS | `SPDS` | `9a4369f9-7d50-4a51-9018-778c5d842101` |
 
 #### Sprint 1 Cycle IDs (Apr 6–20, 2026) — ENDED
+These UUIDs are used in the Blockcell `compile_dashboard_data.py` workflow (Q2_ISSUE_FILES for accumulated donut). The BAK app detects past cycles dynamically via Q2_START and does not use these.
+
 | Team | Cycle UUID |
 |---|---|
 | RADS-DS | `e59aece4-90df-45fe-82cb-8c92311ad479` |
@@ -647,6 +694,8 @@ This section stores discovered team IDs, cycle IDs, and people for each org Davi
 | SPDS | `22b97d24-9249-4ebf-8895-1c5a67e5588a` |
 
 #### Sprint 2 Cycle IDs (Apr 20 – May 4, 2026) — ACTIVE
+These UUIDs are used in the Blockcell `compile_dashboard_data.py` workflow only. The BAK app detects the active cycle dynamically and does not need these hardcoded.
+
 | Team | Cycle UUID |
 |---|---|
 | RADS-DS | `df036406-d025-4b12-ba44-99927abd24a4` |
