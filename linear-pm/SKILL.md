@@ -83,15 +83,24 @@ Use narrow GraphQL selection sets (`first: 100`, `after` cursor for pagination) 
 
 ## Sprint Dashboard Pattern
 
-David maintains single-file HTML sprint dashboards for his teams. The pattern is reusable for any org. When asked to build or update a dashboard for a new team, follow these conventions.
+David maintains sprint dashboards for his teams. There are two implementations:
 
-### Dashboard File Location
+| | BAK App (PRIMARY) | Blockcell (secondary) |
+|---|---|---|
+| **URL** | `https://g2.sqprod.co/apps/rads-sprint-dashboard` | `https://blockcell.sqprod.co/sites/rads-sprint-dashboard/` |
+| **Repo** | `squareup/g2-apps` → `rads-sprint-dashboard/` | `/Users/dbroesch/development/project management/` |
+| **Data** | Live from Linear, auto-refreshes hourly | Static snapshot, manual refresh |
+| **Default** | **Yes — use this one** | Fallback only |
+
+**When the user says "update the dashboard" or "refresh the dashboard" → update Blockcell** (the BAK app is always live). Only update Blockcell when explicitly asked.
+
+### Dashboard File Location (Blockcell static)
 ```
 /Users/dbroesch/development/project management/<team-slug>-<quarter>-status.html
 ```
 Example: `rads-q2-2026-status.html`
 
-### Refreshing an Existing Dashboard (Fast Path — use this for RADS)
+### Refreshing the Blockcell Dashboard (secondary — use only when asked)
 
 **DO NOT** manually edit the HTML or use a general-purpose agent. Use the script pipeline:
 
